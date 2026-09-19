@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.venv/
+.cache/
+
+# Runtime data
+*.db
+*.db-shm
+*.db-wal
+datos/
+logs/
+
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+secrets/
+*.pem
+*.key
+firebase-sa.json
+
+# Editors and operating systems
+.DS_Store
+.idea/
+.vscode/*.local.json
+
+# Enterprise Architect lock file
+*.ldb
