@@ -4,21 +4,29 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "defensa-web-servicio"
-version = "0.1.0"
+version = "0.2.0"
 description = "Servicio de defensa web en tiempo de ejecución"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
   "alembic>=1.14,<2",
+  "argon2-cffi>=23.1,<26",
   "fastapi>=0.115,<1",
+  "httpx>=0.28,<1",
+  "PyJWT>=2.10,<3",
   "pydantic-settings>=2.7,<3",
   "sqlmodel>=0.0.24,<0.1",
   "uvicorn[standard]>=0.34,<1",
 ]
 
 [project.optional-dependencies]
+real = [
+  "firebase-admin>=7,<8",
+  "joblib>=1.4,<2",
+  "scikit-learn>=1.6,<2",
+]
+
 dev = [
-  "httpx>=0.28,<1",
   "mypy>=1.15,<2",
   "pre-commit>=4,<5",
   "pytest>=8.3,<10",

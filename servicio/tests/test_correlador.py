@@ -29,8 +29,8 @@ def test_evento_fuera_de_ventana_crea_otro_incidente() -> None:
     inicio = datetime(2026, 9, 19, 12, 0, 0)
 
     with Session(motor) as sesion:
-        primero, _ = correlador.registrar(crear_evento(inicio), sesion)
+        primero, _, _ = correlador.registrar(crear_evento(inicio), sesion)
         sesion.commit()
-        segundo, _ = correlador.registrar(crear_evento(inicio + timedelta(seconds=301)), sesion)
+        segundo, _, _ = correlador.registrar(crear_evento(inicio + timedelta(seconds=301)), sesion)
 
         assert primero.id != segundo.id

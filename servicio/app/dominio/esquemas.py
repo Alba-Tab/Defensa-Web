@@ -33,3 +33,49 @@ class ResultadoProcesamiento(BaseModel):
     incidente_id: int
     evento_id: int
     baneo_id: int | None = None
+    incidente_nuevo: bool
+
+
+class CredencialesEntrada(BaseModel):
+    usuario: str = Field(min_length=1, max_length=100)
+    contrasena: str = Field(min_length=1, max_length=256)
+
+
+class TokenSalida(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    expires_in: int
+
+
+class DispositivoEntrada(BaseModel):
+    token_fcm: str = Field(min_length=16, max_length=4096)
+    plataforma: str = Field(pattern="^(android|ios)$")
+
+
+class IncidenteSalida(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    ip_origen: str
+    categoria: str
+    tipo_ataque: str
+    severidad: int
+    estado: str
+    inicio: datetime
+    ultima_actividad: datetime
+    confianza_clasificador: float | None
+    categoria_owasp: str | None
+    informe: str | None
+    origen_informe: str | None
+
+
+class BaneoSalida(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    ip: str
+    inicio: datetime
+    expira: datetime
+    estado: str
+    nivel_reincidencia: int
+    incidente_id: int

@@ -23,6 +23,10 @@ class Incidente(SQLModel, table=True):
     tipo_ataque: str = "indeterminado"
     severidad: int = Field(ge=1, le=3)
     estado: str = "abierto"
+    confianza_clasificador: float | None = None
+    categoria_owasp: str | None = None
+    informe: str | None = None
+    origen_informe: str | None = None
     inicio: datetime = Field(default_factory=ahora_utc)
     ultima_actividad: datetime = Field(default_factory=ahora_utc, index=True)
     eventos: list["Evento"] = Relationship(back_populates="incidente")
@@ -78,6 +82,7 @@ class Dispositivo(SQLModel, table=True):
     alta: datetime = Field(default_factory=ahora_utc)
     actualizado_en: datetime = Field(default_factory=ahora_utc)
     usuario_id: int | None = Field(default=None, foreign_key="usuario.id")
+    activo: bool = True
 
 
 class Auditoria(SQLModel, table=True):

@@ -1,0 +1,12 @@
+[defensa-web]
+enabled = true
+filter = defensa-web
+logpath = /var/log/defensa/acciones.log
+backend = polling
+maxretry = 5
+findtime = 60
+bantime = 600
+banaction = nftables-multiport
+port = http,https
+protocol = tcp
+ignoreip = 127.0.0.0/8 ::1 192.168.56.0/24

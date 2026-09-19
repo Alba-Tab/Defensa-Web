@@ -1,0 +1,1 @@
+defensa ALL=(root) NOPASSWD: /usr/bin/fail2ban-client set defensa-web banip *, /usr/bin/fail2ban-client set defensa-web unbanip *, /usr/bin/fail2ban-client get defensa-web banip, /usr/bin/fail2ban-client status defensa-web

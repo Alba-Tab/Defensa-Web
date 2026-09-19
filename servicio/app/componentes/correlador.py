@@ -10,7 +10,7 @@ class Correlador:
     def __init__(self, ventana_segundos: int) -> None:
         self._ventana = timedelta(seconds=ventana_segundos)
 
-    def registrar(self, entrada: EventoEntrada, sesion: Session) -> tuple[Incidente, Evento]:
+    def registrar(self, entrada: EventoEntrada, sesion: Session) -> tuple[Incidente, Evento, bool]:
         inicio_ventana = entrada.fecha_utc - self._ventana
         sentencia = (
             select(Incidente)
@@ -23,6 +23,7 @@ class Correlador:
             .order_by(col(Incidente.ultima_actividad).desc())
         )
         incidente = sesion.exec(sentencia).first()
+        nuevo = incidente is None
         if incidente is None:
             incidente = Incidente(
                 ip_origen=entrada.ip_origen,
@@ -41,4 +42,4 @@ class Correlador:
         evento = Evento(**entrada.model_dump(), incidente_id=incidente.id)
         sesion.add(evento)
         sesion.flush()
-        return incidente, evento
+        return incidente, evento, nuevo

@@ -25,7 +25,29 @@ def test_salud_informa_modo_simulado(cliente: TestClient) -> None:
         "estado": "operativo",
         "modo": "simulado",
         "entorno": "pruebas",
+        "fuente_eventos": "FakeSource",
+        "actuador": "DryRunActuator",
+        "clasificador": "ClasificadorNulo",
+        "notificador": "NotificadorNulo",
     }
+
+
+def iniciar_sesion(cliente: TestClient) -> str:
+    respuesta = cliente.post(
+        "/api/auth/login",
+        json={"usuario": "admin", "contrasena": "contrasena-de-pruebas"},
+    )
+    assert respuesta.status_code == 200
+    return str(respuesta.json()["access_token"])
+
+
+def test_api_operativa_exige_token(cliente: TestClient) -> None:
+    sin_token = cliente.get("/api/incidentes")
+    token = iniciar_sesion(cliente)
+    con_token = cliente.get("/api/incidentes", headers={"Authorization": f"Bearer {token}"})
+
+    assert sin_token.status_code == 401
+    assert con_token.status_code == 200
 
 
 def test_cinco_eventos_crean_un_incidente_y_un_baneo(cliente: TestClient) -> None:
@@ -57,3 +79,21 @@ def test_ip_invalida_se_rechaza_sin_accion_externa(cliente: TestClient) -> None:
 
     assert respuesta.status_code == 422
     assert asyncio.run(cliente.app.state.actuador.bloqueos()) == {}
+
+
+def test_circuito_movil_lista_y_libera_baneo(cliente: TestClient) -> None:
+    for _ in range(5):
+        assert cliente.post("/api/simulacion/eventos", json=evento("192.0.2.44")).status_code == 201
+    token = iniciar_sesion(cliente)
+    cabeceras = {"Authorization": f"Bearer {token}"}
+
+    incidentes = cliente.get("/api/incidentes", headers=cabeceras)
+    baneos = cliente.get("/api/baneos", headers=cabeceras)
+    liberacion = cliente.post("/api/baneos/192.0.2.44/liberar", headers=cabeceras)
+    baneos_actualizados = cliente.get("/api/baneos", headers=cabeceras)
+
+    assert incidentes.status_code == 200
+    assert incidentes.json()[0]["ip_origen"] == "192.0.2.44"
+    assert baneos.json()[0]["estado"] == "vigente"
+    assert liberacion.json() == {"estado": "liberado", "ip": "192.0.2.44"}
+    assert baneos_actualizados.json()[0]["estado"] == "liberado"
