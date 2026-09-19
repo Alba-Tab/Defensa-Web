@@ -31,8 +31,10 @@ class Ajustes(BaseSettings):
     admin_password: SecretStr | None = None
     modelo_clasificador: Path | None = None
     umbral_confianza: float = Field(default=0.6, ge=0, le=1)
-    ollama_url: str = "http://127.0.0.1:11434"
-    ollama_modelo: str | None = None
+    openrouter_url: str = "https://openrouter.ai/api/v1/chat/completions"
+    openrouter_api_key: SecretStr | None = None
+    openrouter_modelo: str | None = None
+    openrouter_referer: str | None = None
     timeout_ia_segundos: float = Field(default=20, gt=0, le=120)
     fcm_credenciales: Path | None = None
 
@@ -47,7 +49,9 @@ class Ajustes(BaseSettings):
         "jwt_secret",
         "admin_password",
         "modelo_clasificador",
-        "ollama_modelo",
+        "openrouter_api_key",
+        "openrouter_modelo",
+        "openrouter_referer",
         "fcm_credenciales",
         mode="before",
     )
@@ -57,6 +61,12 @@ class Ajustes(BaseSettings):
 
     @model_validator(mode="after")
     def validar_produccion(self) -> "Ajustes":
+        ia_configurada = self.openrouter_api_key is not None
+        modelo_configurado = self.openrouter_modelo is not None
+        if ia_configurada != modelo_configurado:
+            raise ValueError(
+                "DEFENSA_OPENROUTER_API_KEY y DEFENSA_OPENROUTER_MODELO deben configurarse juntos"
+            )
         if self.modo == "real":
             if self.jwt_secret is None or not self.jwt_secret.get_secret_value():
                 raise ValueError("DEFENSA_JWT_SECRET es obligatorio en modo real")

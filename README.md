@@ -1,7 +1,7 @@
 # Plataforma de Defensa Web en Tiempo de Ejecución
 
 Base ejecutable previa al Sprint 1. Incluye modo simulado y real, infraestructura defensiva,
-persistencia SQLite, correlación, política de bloqueo, clasificación e informes locales,
+persistencia SQLite, correlación, política de bloqueo, clasificación e informes con OpenRouter,
 notificación FCM y cliente Android.
 
 ## Requisitos
@@ -39,7 +39,7 @@ make check-all
 - Un evento se agrupa por IP y categoría dentro de una ventana configurable.
 - Cinco eventos de severidad media o alta en 60 segundos producen un baneo simulado.
 - La lista blanca y los baneos ya vigentes evitan acciones duplicadas.
-- El enriquecedor genera la ficha con Ollama o plantilla y envía FCM para severidad alta.
+- El enriquecedor genera la ficha con OpenRouter o plantilla y envía FCM para severidad alta.
 - La app Android consume autenticación, incidentes, informes, bloqueos y liberación remota.
 
 ## Modo real

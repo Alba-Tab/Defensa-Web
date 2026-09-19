@@ -16,7 +16,7 @@ from app.componentes.actuador import ActuadorBloqueo, DryRunActuator, Fail2banAc
 from app.componentes.clasificador import Clasificador, ClasificadorJoblib, ClasificadorNulo
 from app.componentes.correlador import Correlador
 from app.componentes.fuente_eventos import EveSource, FakeSource, FuenteEventos
-from app.componentes.informes import GeneradorInformes, GeneradorOllama, GeneradorPlantilla
+from app.componentes.informes import GeneradorInformes, GeneradorOpenRouter, GeneradorPlantilla
 from app.componentes.notificador import Notificador, NotificadorFirebase, NotificadorNulo
 from app.componentes.politicas import MotorPoliticas
 from app.config import Ajustes, obtener_ajustes
@@ -48,11 +48,13 @@ def crear_aplicacion(ajustes: Ajustes | None = None) -> FastAPI:
         clasificador = ClasificadorNulo()
 
     generador: GeneradorInformes
-    if configuracion.ollama_modelo:
-        generador = GeneradorOllama(
-            configuracion.ollama_url,
-            configuracion.ollama_modelo,
+    if configuracion.openrouter_api_key and configuracion.openrouter_modelo:
+        generador = GeneradorOpenRouter(
+            configuracion.openrouter_url,
+            configuracion.openrouter_api_key.get_secret_value(),
+            configuracion.openrouter_modelo,
             configuracion.timeout_ia_segundos,
+            configuracion.openrouter_referer,
         )
     else:
         generador = GeneradorPlantilla()
