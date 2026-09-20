@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <section class="acceso" aria-labelledby="titulo-acceso">
+    <div class="acceso-presentacion">
+      <span class="marca-icono marca-icono-grande" aria-hidden="true">D</span>
+      <p class="sobrelinea">Defensa Web</p>
+      <h1 id="titulo-acceso">Centro de operaciones</h1>
+      <p>Supervisa incidentes, componentes y bloqueos desde un único panel local.</p>
+      <ul class="lista-beneficios" aria-label="Características">
+        <li>Alertas en tiempo real</li>
+        <li>Operación sin servicios externos</li>
+        <li>Sesión protegida durante 8 horas</li>
+      </ul>
+    </div>
+    <form id="formulario-login" class="tarjeta-acceso">
+      <div>
+        <p class="sobrelinea">Acceso administrativo</p>
+        <h2>Iniciar sesión</h2>
+        <p class="texto-secundario">Usa las credenciales configuradas para el administrador.</p>
+      </div>
+      <label>
+        Usuario
+        <input name="usuario" autocomplete="username" required autofocus>
+      </label>
+      <label>
+        Contraseña
+        <input name="contrasena" type="password" autocomplete="current-password" required>
+      </label>
+      <p id="error-login" class="mensaje-error" role="alert" hidden></p>
+      <button class="boton-primario" type="submit">Entrar al panel</button>
+    </form>
+  </section>
+{% endblock %}
+
+{% block scripts %}
+  <script defer src="{{ url_for('static', path='/js/login.js') }}"></script>
+{% endblock %}

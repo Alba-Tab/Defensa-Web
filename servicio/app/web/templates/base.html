@@ -12,6 +12,7 @@
   </head>
   <body>
     <a class="salto-contenido" href="#contenido">Saltar al contenido</a>
+    {% if usuario is defined and usuario %}
     <header class="barra-superior" x-data="{ menuAbierto: false }">
       <a class="marca" href="/" aria-label="Ir al panel principal">
         <span class="marca-icono" aria-hidden="true">D</span>
@@ -28,8 +29,20 @@
         <a aria-current="page" href="/">Resumen</a>
         <a href="#incidentes">Incidentes</a>
         <a href="#componentes">Componentes</a>
+        <a href="#bloqueos">Bloqueos</a>
       </nav>
+      <div class="sesion-usuario">
+        <span>{{ usuario.nombre }}</span>
+        <button
+          id="cerrar-sesion"
+          class="boton-texto"
+          type="button"
+          hx-post="/api/auth/logout"
+          hx-swap="none"
+        >Salir</button>
+      </div>
     </header>
+    {% endif %}
     <main id="contenido" class="contenido">
       {% block content %}{% endblock %}
     </main>

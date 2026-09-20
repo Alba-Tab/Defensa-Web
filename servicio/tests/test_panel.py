@@ -5,11 +5,30 @@ from fastapi.testclient import TestClient
 from app.web import DIRECTORIO_PLANTILLAS
 
 
-def test_panel_carga_el_esqueleto_y_dependencias_locales(cliente: TestClient) -> None:
+def test_panel_exige_sesion_y_carga_las_historias_web(cliente: TestClient) -> None:
+    sin_sesion = cliente.get("/", follow_redirects=False)
+    assert sin_sesion.status_code == 303
+    assert sin_sesion.headers["location"] == "/login"
+
+    sesion = cliente.post(
+        "/api/auth/sesion",
+        json={"usuario": "admin", "contrasena": "contrasena-de-pruebas"},
+    )
+    assert sesion.status_code == 200
     respuesta = cliente.get("/")
 
     assert respuesta.status_code == 200
-    assert "data-panel-esqueleto" in respuesta.text
+    assert 'hx-post="/api/auth/logout"' in respuesta.text
+    for elemento in (
+        "filtros-incidentes",
+        "lista-incidentes",
+        "lista-componentes",
+        "grafico-incidentes",
+        "grafico-tipos",
+        "lista-bloqueos",
+        "detalle-incidente",
+    ):
+        assert f'id="{elemento}"' in respuesta.text
     for recurso in (
         "/static/vendor/htmx.min.js",
         "/static/vendor/alpine.min.js",
@@ -19,6 +38,7 @@ def test_panel_carga_el_esqueleto_y_dependencias_locales(cliente: TestClient) ->
     ):
         assert recurso in respuesta.text
         assert cliente.get(recurso).status_code == 200
+    assert cliente.get("/static/js/login.js").status_code == 200
 
 
 def test_plantillas_no_referencian_recursos_remotos() -> None:

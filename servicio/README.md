@@ -14,3 +14,8 @@ El modelo de demostración se carga con:
 ```bash
 DEFENSA_MODELO_CLASIFICADOR=servicio/modelos/clasificador.joblib make run
 ```
+
+El panel se abre en `/`. Usa `POST /api/auth/sesion` para crear una cookie de sesión web
+`HttpOnly`; los clientes móviles conservan `POST /api/auth/login` y Bearer. Ollama no es requisito
+para el panel: mientras Pb-19 esté aplazada, Pb-25 lo muestra como `no_configurado`. Para habilitar
+solo su comprobación de salud, configure `DEFENSA_OLLAMA_URL`.

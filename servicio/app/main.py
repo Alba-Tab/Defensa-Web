@@ -12,6 +12,7 @@ from app.api.baneos import router as router_baneos
 from app.api.dispositivos import router as router_dispositivos
 from app.api.eventos import router as router_eventos
 from app.api.incidentes import router as router_incidentes
+from app.api.metricas import router as router_metricas
 from app.api.salud import router as router_salud
 from app.api.simulacion import router as router_simulacion
 from app.componentes.actuador import ActuadorBloqueo, DryRunActuator, Fail2banActuator
@@ -79,6 +80,7 @@ def crear_aplicacion(ajustes: Ajustes | None = None) -> FastAPI:
         else NotificadorNulo()
     )
     correlador = Correlador(configuracion.ventana_correlacion_segundos)
+    bus_eventos = BusEventos()
     politicas = MotorPoliticas(
         actuador,
         umbral_eventos=configuracion.umbral_eventos,
@@ -102,7 +104,6 @@ def crear_aplicacion(ajustes: Ajustes | None = None) -> FastAPI:
         bloqueo_segundos=configuracion.login_bloqueo_segundos,
     )
     cola_enriquecimiento: asyncio.Queue[int] = asyncio.Queue(maxsize=1000)
-    bus_eventos = BusEventos()
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
@@ -147,13 +148,12 @@ def crear_aplicacion(ajustes: Ajustes | None = None) -> FastAPI:
                 motor,
                 generador,
                 notificador,
-                bus_eventos,
             ),
             name="enriquecer-incidentes",
         )
         tarea_ingesta = (
             asyncio.create_task(
-                consumir_eventos(fuente, procesador, motor, cola_enriquecimiento),
+                consumir_eventos(fuente, procesador, motor, cola_enriquecimiento, bus_eventos),
                 name="consumir-eve",
             )
             if configuracion.modo == "real"
@@ -185,6 +185,7 @@ def crear_aplicacion(ajustes: Ajustes | None = None) -> FastAPI:
     aplicacion.include_router(router_salud, prefix="/api")
     aplicacion.include_router(router_simulacion, prefix="/api")
     aplicacion.include_router(router_incidentes, prefix="/api")
+    aplicacion.include_router(router_metricas, prefix="/api")
     aplicacion.include_router(router_baneos, prefix="/api")
     aplicacion.include_router(router_dispositivos, prefix="/api")
     aplicacion.include_router(router_eventos, prefix="/api")

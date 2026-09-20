@@ -1,7 +1,7 @@
 # Plataforma de Defensa Web en Tiempo de Ejecución
 
 Base ejecutable previa al Sprint 1. Incluye modo simulado y real, infraestructura defensiva,
-persistencia SQLite, correlación, política de bloqueo, clasificación e informes con OpenRouter,
+persistencia SQLite, correlación, política de bloqueo, clasificación e informes por plantilla,
 notificación FCM y cliente Android.
 
 ## Requisitos
@@ -23,8 +23,9 @@ make run
 Los comandos se ejecutan desde la raíz del repositorio para que la API y Alembic utilicen la
 misma configuración y el mismo archivo de base de datos.
 
-La API queda en `http://127.0.0.1:8000`; documentación OpenAPI en `/docs` y salud en
-`/api/salud`.
+El panel queda en `http://127.0.0.1:8000`; si no hay sesión redirige a `/login`. La documentación
+OpenAPI está en `/docs`. Los endpoints operativos, incluido `/api/salud`, exigen Bearer para móvil
+o la cookie `HttpOnly` emitida por el login web.
 
 ## Verificación
 
@@ -44,8 +45,10 @@ Firebase requiere el `google-services.json` del proyecto real del equipo; siga
 - Un evento se agrupa por IP y categoría dentro de una ventana configurable.
 - Cinco eventos de severidad media o alta en 60 segundos producen un baneo simulado.
 - La lista blanca y los baneos ya vigentes evitan acciones duplicadas.
-- El enriquecedor genera la ficha con OpenRouter o plantilla y envía FCM para severidad alta.
+- El enriquecedor genera la ficha por plantilla y envía FCM para severidad alta. El cliente de
+  OpenRouter permanece como componente experimental, pero no está conectado al arranque actual.
 - La app Android consume autenticación, incidentes, informes, bloqueos y liberación remota.
+- El panel web consume historial filtrable, detalle, SSE, salud, métricas y liberación de bloqueos.
 
 ## Modo real
 
@@ -127,7 +130,8 @@ En ambos casos el servicio queda en **`http://127.0.0.1:8000`**.
 ### 4. Comprobar que funciona
 
 - Documentación interactiva de la API: `http://127.0.0.1:8000/docs`
-- Estado de salud: `http://127.0.0.1:8000/api/salud` (debe responder `"estado": "operativo"`)
+- Panel web: `http://127.0.0.1:8000/` (redirige al inicio de sesión)
+- Estado de salud autenticado: `http://127.0.0.1:8000/api/salud`
 
 Probar el login y un ataque simulado (reemplacen la clave por la que pusieron en `.env`):
 
@@ -184,7 +188,7 @@ flutter run
 | Si quieren probar... | Necesitan configurar en `.env` |
 |---|---|
 | El clasificador de IA local | `DEFENSA_MODELO_CLASIFICADOR=servicio/modelos/clasificador.joblib` (el modelo de demo ya está en el repo) |
-| Informes redactados por IA (OpenRouter) | `DEFENSA_OPENROUTER_API_KEY` y `DEFENSA_OPENROUTER_MODELO` (pedir la clave al equipo, no compartirla por chats públicos) |
+| Cliente experimental de OpenRouter | El componente y sus pruebas existen, pero no se conecta al arranque mientras Pb-19 esté aplazada |
 | Notificaciones push reales | Ver `movil/FIREBASE.md` |
 | La capa defensiva completa (Suricata, nginx, nftables, Fail2ban) | Necesita Vagrant + VirtualBox — ver `infra/README.md` y correr `vagrant up` |
 

@@ -60,6 +60,7 @@ def test_todas_las_rutas_protegidas_rechazan_tokens_ausentes_alterados_y_vencido
         ("GET", "/api/incidentes"),
         ("GET", "/api/incidentes/1"),
         ("GET", "/api/baneos"),
+        ("GET", "/api/metricas"),
         ("POST", "/api/baneos/192.0.2.1/liberar"),
         ("POST", "/api/dispositivos"),
         ("GET", "/api/eventos"),
@@ -76,6 +77,21 @@ def test_todas_las_rutas_protegidas_rechazan_tokens_ausentes_alterados_y_vencido
         assert sin_token.status_code == 401, ruta
         assert con_token_alterado.status_code == 401, ruta
         assert con_token_vencido.status_code == 401, ruta
+
+
+def test_sesion_web_usa_cookie_http_only_y_logout_la_elimina(cliente: TestClient) -> None:
+    inicio = cliente.post(
+        "/api/auth/sesion",
+        json={"usuario": "admin", "contrasena": "contrasena-de-pruebas"},
+    )
+
+    assert inicio.status_code == 200
+    assert "HttpOnly" in inicio.headers["set-cookie"]
+    assert "SameSite=strict" in inicio.headers["set-cookie"]
+    assert cliente.get("/api/incidentes").status_code == 200
+    salida = cliente.post("/api/auth/logout")
+    assert salida.status_code == 204
+    assert cliente.get("/api/incidentes").status_code == 401
 
 
 def test_contrasena_se_persiste_como_hash(cliente: TestClient) -> None:

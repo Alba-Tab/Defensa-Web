@@ -1,7 +1,7 @@
 from datetime import UTC, datetime
 from ipaddress import ip_address
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Query, Request
 from sqlmodel import col, select
 
 from app.api.dependencias import Sesion, UsuarioActual
@@ -12,9 +12,18 @@ router = APIRouter(prefix="/baneos", tags=["baneos"])
 
 
 @router.get("", response_model=list[BaneoSalida])
-def listar_baneos(sesion: Sesion, usuario: UsuarioActual) -> list[Baneo]:
+def listar_baneos(
+    sesion: Sesion,
+    usuario: UsuarioActual,
+    estado: str | None = Query(default=None, pattern="^(vigente|liberado|expirado|fallido)$"),
+) -> list[Baneo]:
     del usuario
-    return list(sesion.exec(select(Baneo).order_by(col(Baneo.inicio).desc())).all())
+    sentencia = select(Baneo)
+    if estado is not None:
+        sentencia = sentencia.where(Baneo.estado == estado)
+    if estado == "vigente":
+        sentencia = sentencia.where(Baneo.expira > datetime.now(UTC).replace(tzinfo=None))
+    return list(sesion.exec(sentencia.order_by(col(Baneo.inicio).desc())).all())
 
 
 @router.post("/{ip}/liberar")

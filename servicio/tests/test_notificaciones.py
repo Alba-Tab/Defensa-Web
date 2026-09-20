@@ -6,7 +6,6 @@ import pytest
 from sqlalchemy.pool import StaticPool
 from sqlmodel import Session, SQLModel, create_engine, select
 
-from app.componentes.eventos_tiempo_real import BusEventos
 from app.componentes.informes import GeneradorPlantilla
 from app.dominio.modelos import Dispositivo, Evento, Incidente
 from app.integracion import enriquecer_incidentes
@@ -49,7 +48,7 @@ def preparar_incidente(sesion: Session, severidad: int, ip: str) -> Incidente:
 
 
 @pytest.mark.asyncio
-async def test_incidente_alto_notifica_una_vez_publica_sse_y_elimina_token_invalido() -> None:
+async def test_incidente_alto_notifica_una_vez_y_elimina_token_invalido() -> None:
     motor = create_engine(
         "sqlite://",
         connect_args={"check_same_thread": False},
@@ -69,32 +68,21 @@ async def test_incidente_alto_notifica_una_vez_publica_sse_y_elimina_token_inval
     assert incidente_id is not None
 
     cola: asyncio.Queue[int] = asyncio.Queue()
-    bus = BusEventos()
     notificador = NotificadorEspia({"token-invalido-123456"})
     tarea = asyncio.create_task(
-        enriquecer_incidentes(cola, motor, GeneradorPlantilla(), notificador, bus)
+        enriquecer_incidentes(cola, motor, GeneradorPlantilla(), notificador)
     )
     try:
-        async with bus.suscribir() as eventos:
-            await cola.put(incidente_id)
-            await cola.join()
-            alerta = await asyncio.wait_for(eventos.get(), timeout=1)
-            eventos.task_done()
-
-            await cola.put(incidente_id)
-            await cola.join()
-            with pytest.raises(TimeoutError):
-                await asyncio.wait_for(eventos.get(), timeout=0.02)
+        await cola.put(incidente_id)
+        await cola.join()
+        await cola.put(incidente_id)
+        await cola.join()
     finally:
         tarea.cancel()
         with suppress(asyncio.CancelledError):
             await tarea
 
     assert len(notificador.llamadas) == 1
-    assert alerta.incidente_id == incidente_id
-    assert alerta.tipo_ataque == "sqli"
-    assert alerta.severidad == 3
-    assert alerta.ip_origen == "192.0.2.70"
     with Session(motor) as sesion:
         tokens = {dispositivo.token_fcm for dispositivo in sesion.exec(select(Dispositivo)).all()}
         persistido = sesion.get(Incidente, incidente_id)
@@ -126,7 +114,6 @@ async def test_incidente_medio_no_notifica_hasta_escalar_a_alto() -> None:
             motor,
             GeneradorPlantilla(),
             notificador,
-            BusEventos(),
         )
     )
     try:

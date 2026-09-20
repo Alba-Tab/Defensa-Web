@@ -30,6 +30,9 @@ class Ajustes(BaseSettings):
     salud_timeout_segundos: float = Field(default=2, gt=0, le=10)
     fail2ban_binario: Path = Path("/usr/bin/fail2ban-client")
     fail2ban_jail: str = "defensa-web"
+    nginx_servicio: str = "nginx"
+    fail2ban_servicio: str = "fail2ban"
+    ollama_url: str | None = None
     jwt_secret: SecretStr | None = None
     token_minutos: int = Field(default=480, ge=5, le=1440)
     login_max_intentos: int = Field(default=5, ge=1, le=100)
@@ -63,6 +66,7 @@ class Ajustes(BaseSettings):
         "openrouter_api_key",
         "openrouter_modelo",
         "openrouter_referer",
+        "ollama_url",
         "fcm_credenciales",
         mode="before",
     )

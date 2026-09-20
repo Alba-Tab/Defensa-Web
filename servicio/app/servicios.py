@@ -39,6 +39,9 @@ class ProcesadorEventos:
                 evento_id=evento.id,
                 baneo_id=baneo.id if baneo else None,
                 incidente_nuevo=nuevo,
+                tipo_ataque=incidente.tipo_ataque,
+                severidad=incidente.severidad,
+                ip_origen=incidente.ip_origen,
             )
         except Exception:
             sesion.rollback()

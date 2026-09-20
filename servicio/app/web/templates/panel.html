@@ -1,73 +1,125 @@
 {% extends "base.html" %}
 
 {% block content %}
-  <section class="encabezado-pagina" data-panel-esqueleto>
+  <section class="encabezado-pagina">
     <div>
       <p class="sobrelinea">Centro de operaciones</p>
       <h1>Situación de la plataforma</h1>
-      <p>Base local preparada para las historias Pb-22 a Pb-26.</p>
+      <p>Actividad defensiva, disponibilidad y respuesta desde un solo lugar.</p>
     </div>
-    <span class="estado estado-neutral">Esperando integración</span>
+    <span id="estado-plataforma" class="estado estado-cargando">
+      <i aria-hidden="true"></i> Comprobando plataforma
+    </span>
   </section>
+
+  <div id="alertas-vivas" class="alertas-vivas" aria-live="polite" aria-atomic="true"></div>
 
   <section class="rejilla-metricas" aria-label="Métricas principales">
-    <article class="tarjeta-metrica">
-      <span>Incidentes hoy</span>
-      <strong>—</strong>
-      <small>Pb-26 conectará esta métrica</small>
+    <article class="tarjeta-metrica tarjeta-acento">
+      <span>Incidentes hoy</span><strong id="metrica-incidentes">—</strong>
+      <small>Actividad desde las 00:00 UTC</small>
     </article>
     <article class="tarjeta-metrica">
-      <span>Bloqueos vigentes</span>
-      <strong>—</strong>
-      <small>Pb-23 conectará la operación</small>
+      <span>Bloqueos vigentes</span><strong id="metrica-bloqueos">—</strong>
+      <small>Direcciones aisladas ahora</small>
     </article>
     <article class="tarjeta-metrica">
-      <span>Componentes operativos</span>
-      <strong>—</strong>
-      <small>Pb-25 conectará el estado</small>
+      <span>Tipos detectados</span><strong id="metrica-tipos">—</strong>
+      <small>Categorías presentes en el historial</small>
+    </article>
+    <article class="tarjeta-metrica">
+      <span>Componentes activos</span><strong id="metrica-componentes">—</strong>
+      <small>Sobre los servicios configurados</small>
     </article>
   </section>
 
-  <section class="rejilla-panel">
-    <article class="panel" id="incidentes">
+  <section class="rejilla-principal">
+    <article class="panel panel-incidentes" id="incidentes">
       <div class="panel-cabecera">
-        <div>
-          <p class="sobrelinea">Actividad</p>
-          <h2>Incidentes recientes</h2>
-        </div>
-        <span class="estado estado-neutral">Pb-22 / Pb-24</span>
+        <div><p class="sobrelinea">Actividad</p><h2>Historial de incidentes</h2></div>
+        <span id="estado-tiempo-real" class="estado estado-cargando"><i></i> Conectando</span>
       </div>
-      <div class="estado-vacio">
-        <p>El esqueleto está listo para recibir fragmentos HTMX y eventos SSE.</p>
+      <form id="filtros-incidentes" class="filtros">
+        <label>Desde <input name="desde" type="datetime-local"></label>
+        <label>Hasta <input name="hasta" type="datetime-local"></label>
+        <label>IP de origen <input name="ip_origen" inputmode="decimal" placeholder="192.0.2.10"></label>
+        <label>Severidad
+          <select name="severidad">
+            <option value="">Todas</option><option value="1">Baja</option>
+            <option value="2">Media</option><option value="3">Alta</option><option value="4">Crítica</option>
+          </select>
+        </label>
+        <div class="acciones-filtro">
+          <button class="boton-primario" type="submit">Aplicar filtros</button>
+          <button id="limpiar-filtros" class="boton-secundario" type="button">Limpiar</button>
+        </div>
+      </form>
+      <div class="tabla-contenedor">
+        <table>
+          <thead><tr><th>Incidente</th><th>Origen</th><th>Tipo</th><th>Severidad</th><th>Estado</th><th></th></tr></thead>
+          <tbody id="lista-incidentes"><tr><td colspan="6" class="estado-tabla">Cargando incidentes…</td></tr></tbody>
+        </table>
       </div>
     </article>
 
-    <article class="panel" id="componentes">
+    <aside class="panel panel-componentes" id="componentes">
       <div class="panel-cabecera">
-        <div>
-          <p class="sobrelinea">Disponibilidad</p>
-          <h2>Estado de componentes</h2>
-        </div>
-        <span class="estado estado-neutral">Pb-25</span>
+        <div><p class="sobrelinea">Disponibilidad</p><h2>Estado de componentes</h2></div>
+        <button id="actualizar-salud" class="boton-icono" type="button" aria-label="Actualizar estado">↻</button>
       </div>
-      <ul class="lista-componentes">
-        {% for componente in ("nginx", "Suricata", "Fail2ban", "Ollama") %}
-          <li><span>{{ componente }}</span><span aria-label="Estado pendiente">Pendiente</span></li>
+      <ul id="lista-componentes" class="lista-componentes">
+        {% for clave, nombre in (("nginx", "nginx"), ("suricata", "Suricata"), ("fail2ban", "Fail2ban"), ("ollama", "Ollama")) %}
+          <li data-componente="{{ clave }}"><span><i class="punto-estado"></i>{{ nombre }}</span><span>Comprobando</span></li>
         {% endfor %}
       </ul>
+      <p id="ultima-salud" class="pie-panel">Esperando la primera comprobación.</p>
+    </aside>
+  </section>
+
+  <section class="rejilla-graficos" aria-label="Análisis de incidentes">
+    <article class="panel panel-grafico">
+      <div class="panel-cabecera"><div><p class="sobrelinea">Últimas 24 horas</p><h2>Incidentes por hora</h2></div></div>
+      <div class="lienzo-grafico"><canvas id="grafico-incidentes" aria-label="Incidentes registrados por hora"></canvas></div>
+    </article>
+    <article class="panel panel-grafico">
+      <div class="panel-cabecera"><div><p class="sobrelinea">Distribución</p><h2>Tipos de ataque</h2></div></div>
+      <div class="lienzo-grafico"><canvas id="grafico-tipos" aria-label="Distribución por tipo de ataque"></canvas></div>
+    </article>
+    <article class="panel panel-ranking">
+      <div class="panel-cabecera"><div><p class="sobrelinea">Origen</p><h2>IPs con más incidentes</h2></div></div>
+      <ol id="top-ips" class="lista-ranking"><li>Esperando métricas…</li></ol>
     </article>
   </section>
 
-  <section class="panel panel-grafico" aria-labelledby="titulo-grafico">
+  <section class="panel" id="bloqueos">
     <div class="panel-cabecera">
-      <div>
-        <p class="sobrelinea">Tendencia</p>
-        <h2 id="titulo-grafico">Incidentes por hora</h2>
-      </div>
-      <span class="estado estado-neutral">Pb-26</span>
+      <div><p class="sobrelinea">Respuesta activa</p><h2>Bloqueos vigentes</h2></div>
+      <button id="actualizar-bloqueos" class="boton-secundario" type="button">Actualizar</button>
     </div>
-    <canvas id="grafico-incidentes" aria-label="Gráfico pendiente de datos"></canvas>
+    <div class="tabla-contenedor">
+      <table>
+        <thead><tr><th>Dirección IP</th><th>Incidente</th><th>Inicio</th><th>Expira</th><th>Reincidencia</th><th></th></tr></thead>
+        <tbody id="lista-bloqueos"><tr><td colspan="6" class="estado-tabla">Cargando bloqueos…</td></tr></tbody>
+      </table>
+    </div>
   </section>
+
+  <dialog id="detalle-incidente" class="dialogo dialogo-detalle">
+    <div class="dialogo-cabecera">
+      <div><p class="sobrelinea">Análisis</p><h2 id="detalle-titulo">Detalle de incidente</h2></div>
+      <button class="boton-icono" data-cerrar-dialogo type="button" aria-label="Cerrar detalle">×</button>
+    </div>
+    <div id="detalle-contenido" class="detalle-contenido"></div>
+  </dialog>
+
+  <dialog id="confirmar-liberacion" class="dialogo dialogo-confirmacion">
+    <p class="sobrelinea">Confirmación requerida</p><h2>Liberar dirección IP</h2>
+    <p>¿Deseas retirar el bloqueo de <strong id="ip-a-liberar"></strong>? La acción quedará auditada.</p>
+    <div class="acciones-dialogo">
+      <button class="boton-secundario" data-cancelar-liberacion type="button">Cancelar</button>
+      <button id="confirmar-liberar" class="boton-peligro" type="button">Sí, liberar IP</button>
+    </div>
+  </dialog>
 {% endblock %}
 
 {% block scripts %}

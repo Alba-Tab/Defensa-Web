@@ -5,6 +5,7 @@ from sqlmodel import Session
 
 from app.api.dependencias import UsuarioActual, obtener_sesion
 from app.dominio.esquemas import EventoEntrada, ResultadoProcesamiento
+from app.integracion import publicar_incidente_nuevo
 
 router = APIRouter(prefix="/simulacion", tags=["simulacion"])
 
@@ -24,5 +25,6 @@ async def simular_evento(
     if request.app.state.ajustes.modo != "simulado":
         raise HTTPException(status_code=404, detail="Ruta disponible solo en modo simulado")
     resultado: ResultadoProcesamiento = await request.app.state.procesador.procesar(entrada, sesion)
+    publicar_incidente_nuevo(resultado, request.app.state.bus_eventos)
     await request.app.state.cola_enriquecimiento.put(resultado.incidente_id)
     return resultado

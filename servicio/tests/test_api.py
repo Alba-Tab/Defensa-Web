@@ -29,7 +29,10 @@ def test_salud_informa_modo_simulado(cliente: TestClient) -> None:
         "estado": "operativo",
         "modo": "simulado",
         "entorno": "pruebas",
+        "nginx": "no_aplica",
         "suricata": "no_aplica",
+        "fail2ban": "no_aplica",
+        "ollama": "no_configurado",
         "fuente_eventos": "FakeSource",
         "actuador": "DryRunActuator",
         "clasificador": "ClasificadorNulo",
@@ -70,6 +73,45 @@ def test_api_operativa_exige_token(cliente: TestClient) -> None:
 
     assert sin_token.status_code == 401
     assert con_token.status_code == 200
+
+
+def test_historial_filtra_por_fecha_ip_y_severidad_y_valida_entrada(
+    cliente: TestClient,
+) -> None:
+    token = iniciar_sesion(cliente)
+    cabeceras = {"Authorization": f"Bearer {token}"}
+    primero = evento("192.0.2.31")
+    primero["fecha_utc"] = "2026-09-18T10:00:00Z"
+    primero["severidad_firma"] = 1
+    segundo = evento("192.0.2.32")
+    segundo["fecha_utc"] = "2026-09-19T11:00:00Z"
+    segundo["severidad_firma"] = 2
+    cliente.post("/api/simulacion/eventos", json=primero, headers=cabeceras)
+    cliente.post("/api/simulacion/eventos", json=segundo, headers=cabeceras)
+
+    filtrados = cliente.get(
+        "/api/incidentes",
+        params={
+            "desde": "2026-09-18T00:00:00Z",
+            "hasta": "2026-09-18T23:59:59Z",
+            "ip_origen": "192.0.2.31",
+            "severidad": "3",
+        },
+        headers=cabeceras,
+    )
+
+    assert filtrados.status_code == 200
+    assert [incidente["ip_origen"] for incidente in filtrados.json()] == ["192.0.2.31"]
+    assert (
+        cliente.get(
+            "/api/incidentes", params={"ip_origen": "no-es-ip"}, headers=cabeceras
+        ).status_code
+        == 400
+    )
+    assert (
+        cliente.get("/api/incidentes", params={"desde": "ayer"}, headers=cabeceras).status_code
+        == 400
+    )
 
 
 def test_detalle_incidente_incluye_sus_eventos(cliente: TestClient) -> None:
@@ -195,3 +237,19 @@ def test_circuito_movil_lista_y_libera_baneo(cliente: TestClient) -> None:
         )
     assert auditorias
     assert all(auditoria.actor == "admin" for auditoria in auditorias)
+
+
+def test_metricas_resumen_incidentes_bloqueos_tipos_y_top_ips(cliente: TestClient) -> None:
+    token = iniciar_sesion(cliente)
+    cabeceras = {"Authorization": f"Bearer {token}"}
+    for _ in range(5):
+        cliente.post("/api/simulacion/eventos", json=evento("192.0.2.90"), headers=cabeceras)
+
+    respuesta = cliente.get("/api/metricas", headers=cabeceras)
+
+    assert respuesta.status_code == 200
+    datos = respuesta.json()
+    assert datos["resumen"]["incidentes_hoy"] >= 1
+    assert datos["resumen"]["bloqueos_vigentes"] == 1
+    assert len(datos["incidentes_por_hora"]) == 24
+    assert datos["top_ips"][0] == {"ip": "192.0.2.90", "total": 1}

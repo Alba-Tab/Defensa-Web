@@ -39,6 +39,9 @@ class ResultadoProcesamiento(BaseModel):
     evento_id: int
     baneo_id: int | None = None
     incidente_nuevo: bool
+    tipo_ataque: str
+    severidad: int
+    ip_origen: str
 
 
 class CredencialesEntrada(BaseModel):

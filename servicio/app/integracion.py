@@ -10,7 +10,7 @@ from app.componentes.eventos_tiempo_real import AlertaIncidente, BusEventos
 from app.componentes.fuente_eventos import FuenteEventos
 from app.componentes.informes import GeneradorInformes
 from app.componentes.notificador import Notificador
-from app.dominio.esquemas import EventoEntrada
+from app.dominio.esquemas import EventoEntrada, ResultadoProcesamiento
 from app.dominio.modelos import Dispositivo, Incidente, ahora_utc
 from app.repositorio import Repositorio
 from app.servicios import ProcesadorEventos
@@ -23,6 +23,7 @@ async def consumir_eventos(
     procesador: ProcesadorEventos,
     motor: Engine,
     cola_enriquecimiento: asyncio.Queue[int],
+    bus_eventos: BusEventos,
 ) -> None:
     cola_ingesta: asyncio.Queue[EventoEntrada] = asyncio.Queue(maxsize=1000)
 
@@ -32,6 +33,7 @@ async def consumir_eventos(
             try:
                 with Session(motor) as sesion:
                     resultado = await procesador.procesar(evento, sesion)
+                publicar_incidente_nuevo(resultado, bus_eventos)
                 await cola_enriquecimiento.put(resultado.incidente_id)
             except asyncio.CancelledError:
                 raise
@@ -78,7 +80,6 @@ async def enriquecer_incidentes(
     motor: Engine,
     generador: GeneradorInformes,
     notificador: Notificador,
-    bus_eventos: BusEventos,
 ) -> None:
     while True:
         incidente_id = await cola.get()
@@ -122,17 +123,21 @@ async def enriquecer_incidentes(
                     persistido.severidad_notificada = persistido.severidad
                     sesion.add(persistido)
                     sesion.commit()
-                    assert persistido.id is not None
-                    bus_eventos.publicar(
-                        AlertaIncidente(
-                            incidente_id=persistido.id,
-                            tipo_ataque=persistido.tipo_ataque,
-                            severidad=persistido.severidad,
-                            ip_origen=persistido.ip_origen,
-                        )
-                    )
         finally:
             cola.task_done()
+
+
+def publicar_incidente_nuevo(resultado: ResultadoProcesamiento, bus_eventos: BusEventos) -> None:
+    if not resultado.incidente_nuevo:
+        return
+    bus_eventos.publicar(
+        AlertaIncidente(
+            incidente_id=resultado.incidente_id,
+            tipo_ataque=resultado.tipo_ataque,
+            severidad=resultado.severidad,
+            ip_origen=resultado.ip_origen,
+        )
+    )
 
 
 async def cancelar_tarea(tarea: asyncio.Task[None] | None) -> None:
