@@ -7,6 +7,7 @@ const etiqueta = __ENV.ESCENARIO || 'local';
 const respuestas429 = new Rate('respuestas_429');
 
 export const options = {
+  insecureSkipTLSVerify: __ENV.TLS_INSEGURO === 'SI',
   vus: Number(__ENV.VUS || 2),
   duration: __ENV.DURACION || '30s',
   thresholds: {

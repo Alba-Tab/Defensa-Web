@@ -18,4 +18,12 @@ table inet defensa {
         type filter hook output priority 0; policy accept;
         tcp sport 80 queue num 0 bypass
     }
+
+    # Modo B: nginx termina TLS y este flujo HTTP de loopback es el que
+    # Suricata puede decodificar e inspeccionar antes de Juice Shop.
+    chain inspeccion_descifrada {
+        type filter hook output priority 0; policy accept;
+        oifname "lo" tcp dport 3000 queue num 0 bypass
+        oifname "lo" tcp sport 3000 queue num 0 bypass
+    }
 }

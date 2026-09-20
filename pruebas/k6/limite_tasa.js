@@ -9,6 +9,7 @@ const respuestas429 = new Rate('respuestas_429');
 const erroresServidor = new Rate('errores_servidor');
 
 export const options = {
+  insecureSkipTLSVerify: __ENV.TLS_INSEGURO === 'SI',
   scenarios: {
     rafaga: {
       executor: 'constant-arrival-rate',

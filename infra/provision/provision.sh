@@ -11,7 +11,7 @@ export DEBIAN_FRONTEND=noninteractive
 
 apt-get update
 apt-get install -y --no-install-recommends \
-  ca-certificates curl docker.io docker-compose-v2 fail2ban nftables nginx \
+  ca-certificates curl docker.io docker-compose-v2 fail2ban nftables nginx openssl \
   python3 python3-venv rsync sudo suricata suricata-update acl
 
 install -d -m 0755 /etc/defensa /var/log/defensa /opt/defensa
@@ -20,6 +20,8 @@ touch /var/log/defensa/acciones.log
 install -m 0644 "${REPO_DIR}/infra/nginx/defensa-web.conf" /etc/nginx/sites-available/defensa-web
 ln -sfn /etc/nginx/sites-available/defensa-web /etc/nginx/sites-enabled/defensa-web
 rm -f /etc/nginx/sites-enabled/default
+DEFENSA_TLS_IP="${DEFENSA_TLS_IP:-192.168.56.20}" \
+  "${REPO_DIR}/infra/nginx/generar-certificado-lab.sh"
 
 install -m 0644 "${REPO_DIR}/infra/suricata/local.rules" /etc/suricata/rules/local.rules
 install -m 0644 "${REPO_DIR}/infra/suricata/disable.conf" /etc/suricata/disable.conf

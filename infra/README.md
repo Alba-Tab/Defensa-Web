@@ -22,19 +22,35 @@ Antes de usar el modo real, crea `/etc/defensa/defensa.env` a partir de
 `/opt/defensa/servicio`. El informe del Sprint 1 siempre usa la plantilla local y no realiza
 llamadas externas.
 
-## Flujo de red del MVP
+## Flujo HTTPS inspeccionable (Pb-29, Modo B)
 
 ```text
-cliente HTTP :80
+cliente HTTPS :443
   → nftables INPUT (baneo de Fail2ban)
-  → NFQUEUE 0 con bypass
-  → Suricata IPS
-  → nginx :80
+  → nginx termina TLS
+  → HTTP de loopback a 127.0.0.1:3000
+  → nftables OUTPUT / NFQUEUE 0 con bypass
+  → Suricata IPS inspecciona el contenido descifrado
   → aplicación protegida 127.0.0.1:3000
 ```
 
-El modo HTTPS completo requiere mover la inspección al tramo HTTP descifrado entre nginx y la
-aplicación. No se habilita TLS de forma ficticia en esta base.
+El puerto 80 solo responde `308` hacia HTTPS. El certificado autofirmado del laboratorio se crea
+durante el aprovisionamiento en `/etc/defensa/tls`; la clave tiene modo `0600` y tanto certificados
+como claves quedan excluidos de Git. Puede regenerarse de forma idempotente con:
+
+```bash
+sudo DEFENSA_TLS_IP=192.168.56.20 \
+  infra/nginx/generar-certificado-lab.sh
+```
+
+nginx agrega `X-Forwarded-For` con la IP del cliente. Suricata usa el modo XFF `reverse` para
+registrar esa IP como origen en EVE, aunque el socket inspeccionado sea de loopback. `suricata -T`
+en `infra/verificar.sh` detecta si una versión instalada no acepta estos ajustes.
+
+La app móvil consume la API administrativa del servicio en el puerto 8000, no el proxy de Juice
+Shop en 80/443. Por eso la redirección no rompe su funcionamiento actual, pero ese canal sigue en
+HTTP plano: llevarlo a HTTPS y confiar el certificado de laboratorio en Android queda como
+limitación explícita fuera de Pb-29.
 
 ## Límite de tasa (Pb-15)
 

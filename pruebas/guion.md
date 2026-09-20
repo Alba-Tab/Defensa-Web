@@ -61,3 +61,25 @@
 
 La prueba falla si falta un campo estructurado del evento, si la petición maliciosa llega a nginx
 con la regla de descarte activa o si una petición legítima es descartada/baneada.
+
+## Pb-29: repetir la detección detrás de HTTPS
+
+1. Ejecutar `sudo /vagrant/infra/verificar.sh` y confirmar que pasan el certificado, la
+   redirección, nginx, Suricata y nftables.
+2. Enviar sqlmap a baja tasa por el punto de entrada TLS:
+
+   ```bash
+   AUTORIZO_LAB=SI TARGET_URL=https://192.168.56.20 \
+     bash pruebas/ataques/sqlmap.sh
+   ```
+
+3. Ejecutar el mismo lanzador contra la línea base HTTP de Modo A si esa evidencia aún no existe.
+   Confirmar en `eve.json` el mismo SID/firma de SQLi en ambos modos y verificar que `src_ip`
+   corresponde al cliente, no a `127.0.0.1`.
+4. Ejecutar las ráfagas de Pb-15 con `BASE_URL=https://192.168.56.20 TLS_INSEGURO=SI` y comprobar
+   respuestas 429 sin errores 5xx.
+5. Comparar el p(95) de `k6-pb29-http.json` y `k6-pb29-https.json`. La línea base HTTP debe haberse
+   obtenido antes de habilitar la redirección 308.
+
+La prueba falla si nginx no presenta el certificado, si HTTP no redirige, si EVE pierde la IP
+original, si SQLi deja de generar alerta o si el límite de tasa no opera sobre HTTPS.

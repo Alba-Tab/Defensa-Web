@@ -26,6 +26,8 @@ logs/
 secrets/
 *.pem
 *.key
+*.crt
+*.csr
 firebase-sa.json
 movil/android/app/google-services.json
 movil/android/app/google-services.json
