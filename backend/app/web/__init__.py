@@ -1,0 +1,7 @@
+from pathlib import Path
+
+DIRECTORIO_WEB = Path(__file__).resolve().parent
+DIRECTORIO_ESTATICO = DIRECTORIO_WEB / "static"
+DIRECTORIO_PLANTILLAS = DIRECTORIO_WEB / "templates"
+
+__all__ = ["DIRECTORIO_ESTATICO", "DIRECTORIO_PLANTILLAS", "DIRECTORIO_WEB"]

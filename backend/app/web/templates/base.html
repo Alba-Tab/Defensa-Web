@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="dark">
+    <title>{% block title %}{{ titulo }}{% endblock %} · Defensa Web</title>
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/panel.css') }}">
+    <script defer src="{{ url_for('static', path='/vendor/htmx.min.js') }}"></script>
+    <script defer src="{{ url_for('static', path='/vendor/alpine.min.js') }}"></script>
+    <script defer src="{{ url_for('static', path='/vendor/chart.umd.js') }}"></script>
+  </head>
+  <body>
+    <a class="salto-contenido" href="#contenido">Saltar al contenido</a>
+    <header class="barra-superior" x-data="{ menuAbierto: false }">
+      <a class="marca" href="/" aria-label="Ir al panel principal">
+        <span class="marca-icono" aria-hidden="true">D</span>
+        <span>Defensa Web</span>
+      </a>
+      <button
+        class="boton-menu"
+        type="button"
+        aria-label="Mostrar navegación"
+        :aria-expanded="menuAbierto"
+        @click="menuAbierto = !menuAbierto"
+      >Menú</button>
+      <nav :class="{ 'navegacion-abierta': menuAbierto }" aria-label="Navegación principal">
+        <a aria-current="page" href="/">Resumen</a>
+        <a href="#incidentes">Incidentes</a>
+        <a href="#componentes">Componentes</a>
+      </nav>
+    </header>
+    <main id="contenido" class="contenido">
+      {% block content %}{% endblock %}
+    </main>
+    {% block scripts %}{% endblock %}
+  </body>
+</html>

@@ -4,6 +4,7 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
 from sqlmodel import Session, select
 
 from app.api.auth import router as router_auth
@@ -39,6 +40,8 @@ from app.integracion import (
 from app.repositorio import Repositorio
 from app.seguridad import LimitadorLogin, ServicioContrasenas, ServicioTokens
 from app.servicios import ProcesadorEventos
+from app.web import DIRECTORIO_ESTATICO
+from app.web.rutas import router as router_panel
 
 
 def crear_aplicacion(ajustes: Ajustes | None = None) -> FastAPI:
@@ -176,6 +179,8 @@ def crear_aplicacion(ajustes: Ajustes | None = None) -> FastAPI:
         version="0.2.0",
         lifespan=lifespan,
     )
+    aplicacion.mount("/static", StaticFiles(directory=DIRECTORIO_ESTATICO), name="static")
+    aplicacion.include_router(router_panel)
     aplicacion.include_router(router_auth, prefix="/api")
     aplicacion.include_router(router_salud, prefix="/api")
     aplicacion.include_router(router_simulacion, prefix="/api")

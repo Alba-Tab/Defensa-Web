@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <section class="encabezado-pagina" data-panel-esqueleto>
+    <div>
+      <p class="sobrelinea">Centro de operaciones</p>
+      <h1>Situación de la plataforma</h1>
+      <p>Base local preparada para las historias Pb-22 a Pb-26.</p>
+    </div>
+    <span class="estado estado-neutral">Esperando integración</span>
+  </section>
+
+  <section class="rejilla-metricas" aria-label="Métricas principales">
+    <article class="tarjeta-metrica">
+      <span>Incidentes hoy</span>
+      <strong>—</strong>
+      <small>Pb-26 conectará esta métrica</small>
+    </article>
+    <article class="tarjeta-metrica">
+      <span>Bloqueos vigentes</span>
+      <strong>—</strong>
+      <small>Pb-23 conectará la operación</small>
+    </article>
+    <article class="tarjeta-metrica">
+      <span>Componentes operativos</span>
+      <strong>—</strong>
+      <small>Pb-25 conectará el estado</small>
+    </article>
+  </section>
+
+  <section class="rejilla-panel">
+    <article class="panel" id="incidentes">
+      <div class="panel-cabecera">
+        <div>
+          <p class="sobrelinea">Actividad</p>
+          <h2>Incidentes recientes</h2>
+        </div>
+        <span class="estado estado-neutral">Pb-22 / Pb-24</span>
+      </div>
+      <div class="estado-vacio">
+        <p>El esqueleto está listo para recibir fragmentos HTMX y eventos SSE.</p>
+      </div>
+    </article>
+
+    <article class="panel" id="componentes">
+      <div class="panel-cabecera">
+        <div>
+          <p class="sobrelinea">Disponibilidad</p>
+          <h2>Estado de componentes</h2>
+        </div>
+        <span class="estado estado-neutral">Pb-25</span>
+      </div>
+      <ul class="lista-componentes">
+        {% for componente in ("nginx", "Suricata", "Fail2ban", "Ollama") %}
+          <li><span>{{ componente }}</span><span aria-label="Estado pendiente">Pendiente</span></li>
+        {% endfor %}
+      </ul>
+    </article>
+  </section>
+
+  <section class="panel panel-grafico" aria-labelledby="titulo-grafico">
+    <div class="panel-cabecera">
+      <div>
+        <p class="sobrelinea">Tendencia</p>
+        <h2 id="titulo-grafico">Incidentes por hora</h2>
+      </div>
+      <span class="estado estado-neutral">Pb-26</span>
+    </div>
+    <canvas id="grafico-incidentes" aria-label="Gráfico pendiente de datos"></canvas>
+  </section>
+{% endblock %}
+
+{% block scripts %}
+  <script defer src="{{ url_for('static', path='/js/panel.js') }}"></script>
+{% endblock %}
