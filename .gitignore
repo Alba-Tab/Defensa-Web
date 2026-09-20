@@ -36,3 +36,6 @@ movil/android/app/google-services.json
 
 # Enterprise Architect lock file
 *.ldb
+
+# Local working documentation
+/docs/Guia_Cimientos_Arquitectura_y_Pasos.md
