@@ -12,5 +12,5 @@ expira los vencidos y libera bloqueos huérfanos. La decisión y sus límites es
 El modelo de demostración se carga con:
 
 ```bash
-DEFENSA_MODELO_CLASIFICADOR=backend/modelos/clasificador.joblib make run
+DEFENSA_MODELO_CLASIFICADOR=servicio/modelos/clasificador.joblib make run
 ```

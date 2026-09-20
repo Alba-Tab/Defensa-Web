@@ -48,15 +48,15 @@ fi
 
 rsync -a --delete \
   --exclude '.pytest_cache' --exclude '__pycache__' --exclude '*.egg-info' \
-  "${REPO_DIR}/backend/" /opt/defensa/backend/
+  "${REPO_DIR}/servicio/" /opt/defensa/servicio/
 python3 -m venv /opt/defensa/venv
 /opt/defensa/venv/bin/python -m pip install --upgrade pip
-/opt/defensa/venv/bin/python -m pip install '/opt/defensa/backend[real]'
+/opt/defensa/venv/bin/python -m pip install '/opt/defensa/servicio[real]'
 install -d -m 0750 -o defensa -g defensa /opt/defensa/datos /opt/defensa/modelos
 install -m 0644 -o defensa -g defensa \
-  "${REPO_DIR}/backend/modelos/clasificador.joblib" \
+  "${REPO_DIR}/servicio/modelos/clasificador.joblib" \
   /opt/defensa/modelos/clasificador.joblib
-chown -R defensa:defensa /opt/defensa/backend
+chown -R defensa:defensa /opt/defensa/servicio
 
 suricata-update --disable-conf /etc/suricata/disable.conf \
   --enable-conf /etc/suricata/enable.conf || true

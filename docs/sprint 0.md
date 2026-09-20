@@ -23,7 +23,7 @@ Lista completa y ordenada de las 29 historias de usuario del proyecto. El orden 
 
 ### 1.1 Rebanada vertical (primer corte candidato)
 
-Es el hilo mínimo: ataque, detección, incidente, baneo, informe y notificación. Pb-1 a Pb-7 forman el backend, demostrable por API y base de datos; Pb-8 a Pb-10 agregan el móvil.
+Es el hilo mínimo: ataque, detección, incidente, baneo, informe y notificación. Pb-1 a Pb-7 forman el servicio, demostrable por API y base de datos; Pb-8 a Pb-10 agregan el móvil.
 
 | ID | Nombre corto | Historia | Prioridad | Módulo | RF |
 |---|---|---|---|---|---|

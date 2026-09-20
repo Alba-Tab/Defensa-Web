@@ -2,7 +2,7 @@
 
 > Estado verificado el 20 de septiembre de 2026 contra las migraciones de Alembic y los modelos
 > SQLModel del repositorio. Este documento describe lo que crea
-> `python -m alembic -c backend/alembic.ini upgrade head`; las funciones previstas para Sprint 2
+> `python -m alembic -c servicio/alembic.ini upgrade head`; las funciones previstas para Sprint 2
 > que todavía no existen se enumeran al final y no se presentan como implementadas.
 
 ## 1. Resumen
@@ -20,7 +20,7 @@
 | Concurrencia | WAL, `synchronous=NORMAL` y `busy_timeout=5000` en la aplicación |
 
 La fuente de verdad para una base desplegada son las migraciones de
-`backend/alembic/versions/`. Los modelos de `backend/app/dominio/modelos.py` deben permanecer
+`servicio/alembic/versions/`. Los modelos de `servicio/app/dominio/modelos.py` deben permanecer
 alineados con ellas.
 
 ## 2. Migraciones vigentes
@@ -35,16 +35,16 @@ alineados con ellas.
 | `0006_modelo_informe` | Agrega `incidente.modelo_informe` para identificar el modelo local que redactó la ficha. |
 
 El 20 de septiembre de 2026 se ejecutó `upgrade head` sobre las dos bases de desarrollo
-existentes (`datos/defensa.db` y `backend/datos/defensa.db`) y ambas quedaron en
+existentes (`datos/defensa.db` y `servicio/datos/defensa.db`) y ambas quedaron en
 `0006_modelo_informe`. Los archivos SQLite son datos de ejecución y no se versionan; una
 instalación nueva o una copia restaurada debe ejecutar siempre `upgrade head` antes de arrancar.
 
 Comandos desde la raíz del repositorio:
 
 ```bash
-python -m alembic -c backend/alembic.ini current
-python -m alembic -c backend/alembic.ini upgrade head
-python -m alembic -c backend/alembic.ini downgrade -1
+python -m alembic -c servicio/alembic.ini current
+python -m alembic -c servicio/alembic.ini upgrade head
+python -m alembic -c servicio/alembic.ini downgrade -1
 ```
 
 ## 3. Relaciones

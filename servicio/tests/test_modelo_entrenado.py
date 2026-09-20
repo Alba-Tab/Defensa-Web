@@ -6,8 +6,8 @@ from app.componentes.clasificador import ClasificadorJoblib
 from app.dominio.esquemas import EventoEntrada
 
 
-def test_artefacto_demo_es_compatible_con_el_backend() -> None:
-    ruta = Path(__file__).parents[2] / "backend" / "modelos" / "clasificador.joblib"
+def test_artefacto_demo_es_compatible_con_el_servicio() -> None:
+    ruta = Path(__file__).parents[2] / "servicio" / "modelos" / "clasificador.joblib"
     clasificador = ClasificadorJoblib(ruta, umbral=0.6)
     evento = EventoEntrada(
         fecha_utc=datetime(2026, 9, 19, 12, 0, 0),
@@ -32,7 +32,7 @@ def test_artefacto_demo_es_compatible_con_el_backend() -> None:
 
 
 def test_confianza_baja_devuelve_indeterminado_sin_severidad() -> None:
-    ruta = Path(__file__).parents[2] / "backend" / "modelos" / "clasificador.joblib"
+    ruta = Path(__file__).parents[2] / "servicio" / "modelos" / "clasificador.joblib"
     clasificador = ClasificadorJoblib(ruta, umbral=0.99)
     evento = EventoEntrada(
         fecha_utc=datetime(2026, 9, 19, 12, 0, 0),

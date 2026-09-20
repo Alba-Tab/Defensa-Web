@@ -14,7 +14,7 @@ notificación FCM y cliente Android.
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-python -m pip install -e './backend[dev,real]' -r ia/requirements.txt
+python -m pip install -e './servicio[dev,real]' -r ia/requirements.txt
 cp .env.example .env
 make migrate
 make run
@@ -33,7 +33,7 @@ make check-all
 ```
 
 La evidencia manual de Pb-2/Pb-3 está en `pruebas/guion.md`. La muestra reproducible de IA, su
-reporte y el modelo exportado están en `ia/muestras/`, `ia/resultados/` y `backend/modelos/`.
+reporte y el modelo exportado están en `ia/muestras/`, `ia/resultados/` y `servicio/modelos/`.
 Firebase requiere el `google-services.json` del proyecto real del equipo; siga
 `movil/FIREBASE.md` y valide con `bash movil/verificar_firebase.sh`.
 
@@ -58,7 +58,7 @@ limitado de `sudoers` para `fail2ban-client`.
 ## Cómo probar el sistema en tu PC
 
 Guía rápida para el equipo: qué instalar, qué archivos tocar, y cómo comprobar que todo
-funciona. Cubre el backend y la app móvil corriendo en modo **simulado** (sin necesitar la VM
+funciona. Cubre el servicio y la app móvil corriendo en modo **simulado** (sin necesitar la VM
 con Suricata/nftables/Fail2ban — eso solo se prueba en `vagrant up`, ver `infra/README.md`).
 
 ### 0. Requisitos
@@ -66,7 +66,7 @@ con Suricata/nftables/Fail2ban — eso solo se prueba en `vagrant up`, ver `infr
 | Herramienta | Para qué | Notas |
 |---|---|---|
 | Git | Clonar el repo | |
-| Python 3.12+ | Correr el backend | En Windows, instalarlo desde python.org (marcar "Add to PATH") |
+| Python 3.12+ | Correr el servicio | En Windows, instalarlo desde python.org (marcar "Add to PATH") |
 | Docker Desktop | Alternativa a instalar Python (opcional) | |
 | Flutter SDK + Android Studio | Solo si van a probar la app móvil | |
 | `make` | Atajos de comandos | En Windows: Git Bash lo trae, o usar WSL2. Si no tienen `make`, cada comando tiene su equivalente manual más abajo |
@@ -97,14 +97,14 @@ Todo lo demás puede quedar como está — por defecto corre en modo `simulado` 
 un generador de eventos falso) y sin clasificador de IA ni Firebase ni OpenRouter (esos son
 opcionales, ver sección 6).
 
-### 3. Levantar el backend — elijan una opción
+### 3. Levantar el servicio — elijan una opción
 
 **Opción A: entorno local con Python (recomendada)**
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate          # Windows (PowerShell): .venv\Scripts\Activate.ps1
-pip install -e './backend[dev,real]' -r ia/requirements.txt
+pip install -e './servicio[dev,real]' -r ia/requirements.txt
 make migrate
 make run
 ```
@@ -112,8 +112,8 @@ make run
 Si no tienen `make`, el equivalente manual es:
 
 ```bash
-python -m alembic -c backend/alembic.ini upgrade head
-python -m uvicorn app.main:app --app-dir backend --reload
+python -m alembic -c servicio/alembic.ini upgrade head
+python -m uvicorn app.main:app --app-dir servicio --reload
 ```
 
 **Opción B: Docker (no necesita instalar Python)**
@@ -122,7 +122,7 @@ python -m uvicorn app.main:app --app-dir backend --reload
 docker compose up --build
 ```
 
-En ambos casos el backend queda en **`http://127.0.0.1:8000`**.
+En ambos casos el servicio queda en **`http://127.0.0.1:8000`**.
 
 ### 4. Comprobar que funciona
 
@@ -146,7 +146,7 @@ curl -s -X POST http://127.0.0.1:8000/api/simulacion/eventos \
 curl -s http://127.0.0.1:8000/api/incidentes -H "Authorization: Bearer $TOKEN"
 ```
 
-Si el paso 3 devuelve un incidente con esa IP, el backend está funcionando de punta a punta.
+Si el paso 3 devuelve un incidente con esa IP, el servicio está funcionando de punta a punta.
 
 ### 5. Correr la suite automática de pruebas
 
@@ -154,7 +154,7 @@ Si el paso 3 devuelve un incidente con esa IP, el backend está funcionando de p
 make check-all
 ```
 
-Corre lint, tipos, los 13 tests del backend, y análisis/tests de la app móvil. Si todo sale en
+Corre lint, tipos, las pruebas del servicio y análisis/tests de la app móvil. Si todo sale en
 verde, el entorno de cada quien está bien configurado.
 
 ### 6. Probar la app móvil
@@ -167,12 +167,12 @@ flutter run
 
 - **En el emulador de Android**: el campo "Servidor" del login ya viene con
   `http://10.0.2.2:8000` (es la forma en que el emulador ve al `127.0.0.1` de la PC). Con el
-  backend corriendo (paso 3), solo hace falta iniciar sesión con el usuario/clave del `.env`.
+  servicio corriendo (paso 3), solo hace falta iniciar sesión con el usuario/clave del `.env`.
 - **En un celular físico** (misma red Wi-Fi que la PC): `127.0.0.1` no sirve desde el teléfono.
   Necesitan la IP de la PC en la red local (`ipconfig` en Windows, `ifconfig`/`ip a` en
-  Mac/Linux) y arrancar el backend escuchando en todas las interfaces:
+  Mac/Linux) y arrancar el servicio escuchando en todas las interfaces:
   ```bash
-  python -m uvicorn app.main:app --app-dir backend --host 0.0.0.0 --port 8000
+  python -m uvicorn app.main:app --app-dir servicio --host 0.0.0.0 --port 8000
   ```
   (la Opción B con Docker ya escucha así por defecto). Luego, en el campo "Servidor" de la app,
   poner `http://IP_DE_LA_PC:8000`.
@@ -183,7 +183,7 @@ flutter run
 
 | Si quieren probar... | Necesitan configurar en `.env` |
 |---|---|
-| El clasificador de IA local | `DEFENSA_MODELO_CLASIFICADOR=backend/modelos/clasificador.joblib` (el modelo de demo ya está en el repo) |
+| El clasificador de IA local | `DEFENSA_MODELO_CLASIFICADOR=servicio/modelos/clasificador.joblib` (el modelo de demo ya está en el repo) |
 | Informes redactados por IA (OpenRouter) | `DEFENSA_OPENROUTER_API_KEY` y `DEFENSA_OPENROUTER_MODELO` (pedir la clave al equipo, no compartirla por chats públicos) |
 | Notificaciones push reales | Ver `movil/FIREBASE.md` |
 | La capa defensiva completa (Suricata, nginx, nftables, Fail2ban) | Necesita Vagrant + VirtualBox — ver `infra/README.md` y correr `vagrant up` |
@@ -192,5 +192,5 @@ flutter run
 
 - **"no such table: usuario"** → falta correr `make migrate` (o el comando manual de Alembic) antes de `make run`.
 - **Login devuelve 401 con la clave correcta** → revisen que `DEFENSA_ADMIN_PASSWORD` no haya quedado vacío en `.env`; si estaba vacío cuando arrancó por primera vez, el usuario admin nunca se creó. Borren `datos/defensa.db`, completen la clave, y vuelvan a correr `make migrate && make run`.
-- **Puerto 8000 ocupado** → alguien más ya tiene el backend corriendo en esa terminal; ciérrenlo o usen otro puerto (`--port 8001`).
+- **Puerto 8000 ocupado** → alguien más ya tiene el servicio corriendo en esa terminal; ciérrenlo o usen otro puerto (`--port 8001`).
 - **`make` no reconocido en Windows** → usen Git Bash (clic derecho → "Git Bash Here") o instalen `make` con `choco install make`.

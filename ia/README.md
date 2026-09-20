@@ -7,9 +7,9 @@ versionan; deben seguir el esquema de `captura/esquema.csv` y documentar origen 
 source .venv/bin/activate
 python ia/entrenamiento/entrenar.py \
   --entrada ia/datos/peticiones.csv \
-  --salida backend/modelos/clasificador.joblib \
+  --salida servicio/modelos/clasificador.joblib \
   --reporte ia/resultados/evaluacion.json
 ```
 
-El backend carga el artefacto mediante `DEFENSA_MODELO_CLASIFICADOR`. Si no existe, utiliza
+El servicio carga el artefacto mediante `DEFENSA_MODELO_CLASIFICADOR`. Si no existe, utiliza
 `ClasificadorNulo` y mantiene la severidad de la firma.

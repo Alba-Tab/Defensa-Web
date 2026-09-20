@@ -356,7 +356,7 @@ Criterios: se levanta rápido con Docker, poco consumo de RAM, tiene login (fuer
 | **i) Product Backlog (F3)** | Generar HU (Como / Quiero / Para, criterios de aceptación, INVEST) a partir de RF-01 a RF-14. **Los PHU los estima el equipo con Planning Poker, no la IA** |
 
 ### Decisiones cerradas
-Protección en el mismo host con **una aplicación fija** (**Juice Shop v17.3.0**, ya desplegada en `infra/compose/app-protegida.yaml`) · Suricata IPS + Fail2ban + nftables + nginx, insertados en **Modo A** (HTTP en claro; el Modo B con TLS queda diferido como HU Pb-29) · backend único FastAPI + SQLite · panel HTMX · móvil **Flutter** (Android) con notificaciones FCM · autenticación con usuario administrador único, contraseña con hash y token con expiración de 8 h (implementada) · IA local: el clasificador TF-IDF **ya satisface el requisito técnico 1** (confirmado con el docente); Ollama se agrega en el Sprint 2 (Pb-19) como mejora, no como condición · VM Ubuntu Server en red bridged o host-only · IA siempre posterior a la detección · modo simulado para desarrollar sin VM · escenario local: comercio electrónico de una pyme · duración de sprint: **2 semanas** (confirmado con el docente) · herramienta de gestión: **Jira** · herramienta CASE: **Enterprise Architect** (`docs/sw1.eap`) · videos de la exposición: Suricata, Fail2ban y nginx.
+Protección en el mismo host con **una aplicación fija** (**Juice Shop v17.3.0**, ya desplegada en `infra/compose/app-protegida.yaml`) · Suricata IPS + Fail2ban + nftables + nginx, insertados en **Modo A** (HTTP en claro; el Modo B con TLS queda diferido como HU Pb-29) · servicio único FastAPI + SQLite · panel HTMX · móvil **Flutter** (Android) con notificaciones FCM · autenticación con usuario administrador único, contraseña con hash y token con expiración de 8 h (implementada) · IA local: el clasificador TF-IDF **ya satisface el requisito técnico 1** (confirmado con el docente); Ollama se agrega en el Sprint 2 (Pb-19) como mejora, no como condición · VM Ubuntu Server en red bridged o host-only · IA siempre posterior a la detección · modo simulado para desarrollar sin VM · escenario local: comercio electrónico de una pyme · duración de sprint: **2 semanas** (confirmado con el docente) · herramienta de gestión: **Jira** · herramienta CASE: **Enterprise Architect** (`docs/sw1.eap`) · videos de la exposición: Suricata, Fail2ban y nginx.
 
 ### Decisiones abiertas (con propuesta por defecto)
 
@@ -374,6 +374,6 @@ Cada una con criterio de éxito verificable el mismo día:
 4. **Lector de eventos:** sobrevive a la rotación de `eve.json`.
 5. **IA:** la ficha se genera en menos de 20 s en la máquina de demostración, o se decide el modelo más pequeño.
 6. **Alcance móvil:** el teléfono abre el panel por el punto de acceso del portátil.
-7. **Push con FCM:** el backend envía una notificación con `firebase-admin` y llega a un teléfono Android real con la app cerrada; al tocarla se abre el detalle del incidente.
+7. **Push con FCM:** el servicio envía una notificación con `firebase-admin` y llega a un teléfono Android real con la app cerrada; al tocarla se abre el detalle del incidente.
 
 > **Rebanada vertical mínima del primer sprint:** un ataque → detección → incidente en la base → baneo → ficha → notificación. Todo lo demás se construye alrededor de ese hilo.

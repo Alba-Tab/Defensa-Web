@@ -11,7 +11,7 @@ El 2026-09-19 se ejecutó, desde la raíz del repositorio:
 
 Entorno observado: Python 3.14.7, scikit-learn 1.9.1, joblib 1.6.0 y pandas 3.0.6. El resultado
 usó 24 filas para entrenamiento y 6 para prueba, exportó el artefacto y produjo la matriz de
-confusión. Después, `ClasificadorJoblib` —el adaptador usado por el backend— cargó el archivo y
+confusión. Después, `ClasificadorJoblib` —el adaptador usado por el servicio— cargó el archivo y
 ejecutó `predict_proba` sobre una petición SQLi sin acceso a red.
 
 SHA-256:
@@ -26,7 +26,4 @@ La exactitud 5/6 de esta muestra no es una medición válida para producción: c
 sola fila de prueba. Esta ejecución demuestra reproducibilidad, exportación y carga; la evaluación
 de Pb-20 debe repetirse con la captura propia descrita en `docs/datos-ia.md`.
 
-**Nota posterior:** la carpeta `servicio/` se renombró a `backend/` después de esta ejecución. El
-comando, la ruta de salida y los hashes de arriba quedan tal como se registraron ese día (el
-archivo es el mismo, solo cambió su ubicación); el artefacto vigente está en
-`backend/modelos/clasificador.joblib`.
+El artefacto vigente está en `servicio/modelos/clasificador.joblib`.

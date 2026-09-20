@@ -19,7 +19,7 @@ sudo bash infra/provision/provision.sh
 
 Antes de usar el modo real, crea `/etc/defensa/defensa.env` a partir de
 `infra/systemd/defensa.env.example`, establece los secretos y despliega el servicio Python en
-`/opt/defensa/backend`. El informe del Sprint 1 siempre usa la plantilla local y no realiza
+`/opt/defensa/servicio`. El informe del Sprint 1 siempre usa la plantilla local y no realiza
 llamadas externas.
 
 ## Flujo de red del MVP
