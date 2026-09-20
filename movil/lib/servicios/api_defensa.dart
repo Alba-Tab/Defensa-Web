@@ -21,6 +21,21 @@ class ApiDefensa {
     return servidor != null && _token != null;
   }
 
+  Future<String> servidor() async =>
+      await _almacen.read(key: _claveServidor) ?? _dio.options.baseUrl;
+
+  Future<void> actualizarServidor(String servidor) async {
+    final uri = Uri.tryParse(servidor);
+    if (uri == null ||
+        !uri.hasAuthority ||
+        (uri.scheme != 'http' && uri.scheme != 'https')) {
+      throw const FormatException('Use una URL http:// o https:// válida');
+    }
+    final normalizado = servidor.replaceFirst(RegExp(r'/$'), '');
+    _configurarServidor(normalizado);
+    await _almacen.write(key: _claveServidor, value: normalizado);
+  }
+
   void _configurarServidor(String servidor) {
     _dio.options.baseUrl = servidor.replaceFirst(RegExp(r'/$'), '');
   }
@@ -39,7 +54,7 @@ class ApiDefensa {
       data: {'usuario': usuario, 'contrasena': contrasena},
     );
     _token = respuesta.data!['access_token'] as String;
-    await _almacen.write(key: _claveServidor, value: servidor);
+    await actualizarServidor(servidor);
     await _almacen.write(key: _claveToken, value: _token);
   }
 

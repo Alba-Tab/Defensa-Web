@@ -343,7 +343,7 @@ Todas las tarjetas tienen los mismos campos: identificador, nombre corto, priori
 
 1. Los eventos de la misma IP y la misma categoría dentro de una ventana de 5 minutos se agrupan en un único incidente `abierto`.
 2. Un evento de otra IP o de otra categoría crea un incidente distinto.
-3. El incidente registra IP de origen, tipo de ataque, severidad (la de la firma: 1 alta, 2 media, 3 baja), inicio y última actividad.
+3. El incidente registra IP de origen, tipo de ataque, severidad, inicio y última actividad. **La severidad del incidente usa una escala invertida respecto a la de la firma** (`evento.severidad_firma`: 1 alta, 2 media, 3 baja): `incidente.severidad` va de 1 (baja) a 3 (alta) en este sprint — 4 (crítica) queda para Pb-16. El correlador convierte al ingresar el evento: firma 1→3, firma 2→2, firma 3→1. Ver `Modelo_datos.md` (fuente de verdad del esquema) para el detalle de la conversión.
 4. Una ráfaga de sqlmap con cientos de eventos produce un solo incidente por IP y categoría, sin saturar la ingesta.
 5. Un incidente pasa a `cerrado` cuando no tiene baneo vigente y no recibe eventos nuevos durante 5 minutos.
 6. `GET /api/incidentes` y `GET /api/incidentes/{id}` (autenticados) devuelven los incidentes y sus eventos; sin token responden 401.

@@ -19,6 +19,10 @@ def cliente(tmp_path: Path) -> Iterator[TestClient]:
         jwt_secret="secreto-de-pruebas-con-longitud-suficiente",
         admin_usuario="admin",
         admin_password="contrasena-de-pruebas",
+        modelo_clasificador=None,
+        fcm_credenciales=None,
+        openrouter_api_key=None,
+        openrouter_modelo=None,
     )
     motor = crear_motor(ajustes)
     SQLModel.metadata.create_all(motor)

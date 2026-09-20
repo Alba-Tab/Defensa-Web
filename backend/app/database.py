@@ -25,6 +25,8 @@ def crear_motor(ajustes: Ajustes) -> Engine:
         def configurar_sqlite(dbapi_connection: object, _: object) -> None:
             cursor = dbapi_connection.cursor()  # type: ignore[attr-defined]
             cursor.execute("PRAGMA journal_mode=WAL")
+            cursor.execute("PRAGMA synchronous=NORMAL")
+            cursor.execute("PRAGMA busy_timeout=5000")
             cursor.execute("PRAGMA foreign_keys=ON")
             cursor.close()
 

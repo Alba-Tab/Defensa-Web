@@ -1,0 +1,113 @@
+{
+  "muestras_entrenamiento": 24,
+  "muestras_prueba": 6,
+  "clases": [
+    "benigno",
+    "escaneo",
+    "fuerza_bruta",
+    "sqli",
+    "traversal",
+    "xss"
+  ],
+  "reporte": {
+    "benigno": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 1.0
+    },
+    "escaneo": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 1.0
+    },
+    "fuerza_bruta": {
+      "precision": 0.5,
+      "recall": 1.0,
+      "f1-score": 0.6666666666666666,
+      "support": 1.0
+    },
+    "sqli": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1-score": 0.0,
+      "support": 1.0
+    },
+    "traversal": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 1.0
+    },
+    "xss": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 1.0
+    },
+    "accuracy": 0.8333333333333334,
+    "macro avg": {
+      "precision": 0.75,
+      "recall": 0.8333333333333334,
+      "f1-score": 0.7777777777777777,
+      "support": 6.0
+    },
+    "weighted avg": {
+      "precision": 0.75,
+      "recall": 0.8333333333333334,
+      "f1-score": 0.7777777777777777,
+      "support": 6.0
+    }
+  },
+  "matriz_confusion": [
+    [
+      1,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      1,
+      0,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      1,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      1,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      0,
+      1,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      0,
+      0,
+      1
+    ]
+  ]
+}

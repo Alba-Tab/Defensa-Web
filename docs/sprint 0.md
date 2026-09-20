@@ -76,7 +76,7 @@ La sección 3 presenta estas mismas historias agrupadas por módulo del sistema.
 | Cliente legítimo | Persona, usuario indirecto | Usa la aplicación protegida; sufre un falso positivo o una caída | Solo en Pb-4 |
 | Origen malicioso | Persona hostil, externa | Ataca la aplicación | No. Se usa en criterios de aceptación y en el plan de pruebas |
 | Aplicación web protegida | Sistema externo | Recibe el tráfico limpio | No |
-| Servicio Expo Push | Sistema externo | Entrega notificaciones | No |
+| Servicio Firebase Cloud Messaging (FCM) | Sistema externo | Entrega notificaciones | No |
 | Repositorio Emerging Threats Open | Sistema externo | Fuente de firmas | No |
 
 nginx, Suricata, Fail2ban, nftables y Ollama son contenedores del sistema, no actores.
@@ -193,13 +193,15 @@ El proxy nginx y la resolución de la IP real del cliente no son HU: son tareas 
 
 ## 4. Sprint Backlog (F5): Sprint 1 (candidato)
 
+> **Nota de actualización:** el alcance de esta sección quedó como propuesta inicial (candidata) de Sprint 0. El alcance **oficial y vigente** del Sprint 1 es el definido en [Sprint1_Cimientos_y_Tarjetas_HU.md](Sprint1_Cimientos_y_Tarjetas_HU.md), que amplía las historias candidatas de Pb-1–Pb-7 a un total de **13 HU** (agrega Pb-8, Pb-9, Pb-10, Pb-20, Pb-27 y Pb-28 — móvil y clasificación local). Las tareas T-01 a T-55 de esta sección siguen sirviendo como referencia de cimientos/base técnica, pero para el detalle de HU, criterios de aceptación y tarjetas F4 del Sprint 1, ese documento es la fuente de verdad.
+
 ### 4.1 Datos del sprint
 
 | Campo | Detalle |
 |---|---|
 | Objetivo del sprint (propuesta) | Demostrar de extremo a extremo, sobre la aplicación protegida, que un ataque de inyección SQL es detectado, descartado y agrupado en un incidente con su informe, y que un ataque sostenido termina con el origen bloqueado temporalmente en el firewall |
 | Duración | **[POR DEFINIR]**. Regla del docente: de 2 a 4 semanas, igual para todos los sprints |
-| Historias candidatas | Pb-1 a Pb-7 |
+| Historias candidatas | Pb-1 a Pb-7 (propuesta inicial — **ampliado a 13 HU**, ver nota superior y [Sprint1_Cimientos_y_Tarjetas_HU.md](Sprint1_Cimientos_y_Tarjetas_HU.md)) |
 | PHU y capacidad del equipo | Pendientes de Planning Poker |
 | Tablero | Kanban con el Sprint Backlog únicamente (nunca el Product Backlog) |
 | Herramienta de gestión | **[POR DEFINIR]** (Jira, Trello o Azure DevOps) |

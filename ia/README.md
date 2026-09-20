@@ -7,7 +7,7 @@ versionan; deben seguir el esquema de `captura/esquema.csv` y documentar origen 
 source .venv/bin/activate
 python ia/entrenamiento/entrenar.py \
   --entrada ia/datos/peticiones.csv \
-  --salida servicio/modelos/clasificador.joblib \
+  --salida backend/modelos/clasificador.joblib \
   --reporte ia/resultados/evaluacion.json
 ```
 

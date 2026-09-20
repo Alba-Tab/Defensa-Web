@@ -31,6 +31,8 @@
 | Valorado | Reportes generativos en tiempo real; interfaz de tipo asistente conversacional |
 | Caso local | Cada caso debe ubicarse en un escenario de nuestro medio: **[POR DEFINIR]** (propuesta: comercio electrónico de una pyme) |
 
+> **Decisión de equipo (actualización):** el Requisito técnico 1 exige IA local. Por ahora, mientras se prepara el dataset y se entrena el clasificador/generador local, el generador de informes usa **OpenRouter (API en la nube) solo para pruebas de laboratorio**, con `GeneradorPlantilla` como respaldo automático si no hay clave configurada o la llamada falla. Esto es una desviación temporal y consciente del requisito técnico 1, documentada aquí y en `Modelo_datos.md` (campo `incidente.modelo_informe`). La implementación de la IA local (Ollama u otro modelo entrenado localmente) queda pendiente como tarea a completar antes de la entrega final.
+
 ---
 
 ## 2. Objetivo del producto
@@ -198,10 +200,12 @@ Plataforma que se ubica **delante** de una aplicación web ya desplegada, inspec
 | Baneo | ip, inicio, expira, nivel_reincidencia, estado | N pertenecen a 1 Incidente |
 | ListaBlanca | ip_o_red, descripcion | independiente |
 | Dispositivo | token_fcm, plataforma, alta, actualizado_en | independiente |
-| Auditoria | fecha_utc, usuario, accion, ip_afectada | independiente |
+| Auditoria | fecha_utc, actor, accion, ip_afectada, detalle | independiente |
 | Usuario | nombre, hash_contrasena | 1 genera N Auditoria |
 
 **Estados:** Incidente = `abierto` → `cerrado`. Baneo = `vigente` → `expirado` | `liberado` | `fallido`. Informe = `generado_ia` | `plantilla`.
+
+> **Nota:** el esquema real y definitivo está en `Modelo_datos.md` (fuente de verdad para el modelo de datos); esta tabla es la descripción conceptual original y puede diferir en detalles menores (p. ej. el campo se llama `actor`, no `usuario`).
 
 ---
 

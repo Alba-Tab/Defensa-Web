@@ -14,7 +14,7 @@ notificación FCM y cliente Android.
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-python -m pip install -e './servicio[dev,real]' -r ia/requirements.txt
+python -m pip install -e './backend[dev,real]' -r ia/requirements.txt
 cp .env.example .env
 make migrate
 make run
@@ -31,6 +31,11 @@ La API queda en `http://127.0.0.1:8000`; documentación OpenAPI en `/docs` y sal
 ```bash
 make check-all
 ```
+
+La evidencia manual de Pb-2/Pb-3 está en `pruebas/guion.md`. La muestra reproducible de IA, su
+reporte y el modelo exportado están en `ia/muestras/`, `ia/resultados/` y `backend/modelos/`.
+Firebase requiere el `google-services.json` del proyecto real del equipo; siga
+`movil/FIREBASE.md` y valide con `bash movil/verificar_firebase.sh`.
 
 ## Alcance actual
 

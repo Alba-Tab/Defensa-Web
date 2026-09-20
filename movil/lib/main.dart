@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'pantallas/detalle_incidente.dart';
+import 'pantallas/configuracion.dart';
 import 'pantallas/inicio.dart';
 import 'pantallas/login.dart';
 import 'servicios/api_defensa.dart';
@@ -20,12 +21,13 @@ class AplicacionDefensa extends StatefulWidget {
 
 class _AplicacionDefensaState extends State<AplicacionDefensa> {
   final _api = ApiDefensa();
+  final _notificaciones = Notificaciones();
   final _navegador = GlobalKey<NavigatorState>();
   late final Future<bool> _sesionInicial = _api.inicializar();
   bool? _autenticado;
 
   Future<void> _activarNotificaciones() =>
-      Notificaciones().inicializar(_api, (id) async {
+      _notificaciones.inicializar(_api, (id) async {
         final incidente = await _api.incidente(id);
         _navegador.currentState?.push(
           MaterialPageRoute(
@@ -48,6 +50,12 @@ class _AplicacionDefensaState extends State<AplicacionDefensa> {
       colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF0B5D4B)),
       useMaterial3: true,
     ),
+    routes: {
+      PantallaConfiguracion.ruta: (_) => PantallaConfiguracion(
+        api: _api,
+        activarNotificaciones: _activarNotificaciones,
+      ),
+    },
     home: FutureBuilder<bool>(
       future: _sesionInicial,
       builder: (context, snapshot) {

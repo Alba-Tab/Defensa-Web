@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../modelos.dart';
 import '../servicios/api_defensa.dart';
+import 'configuracion.dart';
 import 'detalle_incidente.dart';
 
 class PantallaInicio extends StatefulWidget {
@@ -52,6 +53,12 @@ class _PantallaInicioState extends State<PantallaInicio> {
       title: const Text('Defensa web'),
       actions: [
         IconButton(onPressed: _recargar, icon: const Icon(Icons.refresh)),
+        IconButton(
+          tooltip: 'Configuración',
+          onPressed: () =>
+              Navigator.pushNamed(context, PantallaConfiguracion.ruta),
+          icon: const Icon(Icons.settings),
+        ),
         IconButton(
           onPressed: () async {
             await widget.api.cerrarSesion();

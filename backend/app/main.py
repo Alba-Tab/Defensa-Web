@@ -14,6 +14,7 @@ from app.api.salud import router as router_salud
 from app.api.simulacion import router as router_simulacion
 from app.componentes.actuador import ActuadorBloqueo, DryRunActuator, Fail2banActuator
 from app.componentes.clasificador import Clasificador, ClasificadorJoblib, ClasificadorNulo
+from app.componentes.conciliador import Conciliador
 from app.componentes.correlador import Correlador
 from app.componentes.fuente_eventos import EveSource, FakeSource, FuenteEventos
 from app.componentes.informes import GeneradorInformes, GeneradorOpenRouter, GeneradorPlantilla
@@ -23,6 +24,7 @@ from app.config import Ajustes, obtener_ajustes
 from app.database import crear_motor
 from app.dominio.modelos import Usuario
 from app.integracion import cancelar_tarea, consumir_eventos, enriquecer_incidentes
+from app.repositorio import Repositorio
 from app.seguridad import LimitadorLogin, ServicioContrasenas, ServicioTokens
 from app.servicios import ProcesadorEventos
 
@@ -73,6 +75,8 @@ def crear_aplicacion(ajustes: Ajustes | None = None) -> FastAPI:
         lista_blanca=configuracion.lista_blanca,
     )
     procesador = ProcesadorEventos(correlador, politicas, clasificador)
+    repositorio = Repositorio(motor, configuracion.ventana_correlacion_segundos)
+    conciliador = Conciliador(repositorio, actuador)
     contrasenas = ServicioContrasenas()
     secreto = (
         configuracion.jwt_secret.get_secret_value()
@@ -92,6 +96,8 @@ def crear_aplicacion(ajustes: Ajustes | None = None) -> FastAPI:
         app.state.clasificador = clasificador
         app.state.notificador = notificador
         app.state.procesador = procesador
+        app.state.repositorio = repositorio
+        app.state.conciliador = conciliador
         app.state.contrasenas = contrasenas
         app.state.tokens = tokens
         app.state.limitador_login = limitador_login
@@ -112,6 +118,9 @@ def crear_aplicacion(ajustes: Ajustes | None = None) -> FastAPI:
                         )
                     )
                     sesion.commit()
+
+        resultado_conciliacion = await conciliador.ejecutar()
+        app.state.resultado_conciliacion = resultado_conciliacion
 
         tarea_enriquecimiento = asyncio.create_task(
             enriquecer_incidentes(cola_enriquecimiento, motor, generador, notificador),

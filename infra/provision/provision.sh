@@ -48,12 +48,12 @@ fi
 
 rsync -a --delete \
   --exclude '.pytest_cache' --exclude '__pycache__' --exclude '*.egg-info' \
-  "${REPO_DIR}/servicio/" /opt/defensa/servicio/
+  "${REPO_DIR}/backend/" /opt/defensa/backend/
 python3 -m venv /opt/defensa/venv
 /opt/defensa/venv/bin/python -m pip install --upgrade pip
-/opt/defensa/venv/bin/python -m pip install '/opt/defensa/servicio[real]'
+/opt/defensa/venv/bin/python -m pip install '/opt/defensa/backend[real]'
 install -d -m 0750 -o defensa -g defensa /opt/defensa/datos /opt/defensa/modelos
-chown -R defensa:defensa /opt/defensa/servicio
+chown -R defensa:defensa /opt/defensa/backend
 
 suricata-update --disable-conf /etc/suricata/disable.conf \
   --enable-conf /etc/suricata/enable.conf || true

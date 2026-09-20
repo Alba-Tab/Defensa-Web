@@ -5,12 +5,13 @@ import 'api_defensa.dart';
 
 class Notificaciones {
   static const habilitadas = bool.fromEnvironment('FCM_HABILITADO');
+  bool _inicializadas = false;
 
   Future<void> inicializar(
     ApiDefensa api,
     void Function(int) abrirIncidente,
   ) async {
-    if (!habilitadas) return;
+    if (!habilitadas || _inicializadas) return;
     await Firebase.initializeApp();
     final mensajeria = FirebaseMessaging.instance;
     await mensajeria.requestPermission();
@@ -24,5 +25,6 @@ class Notificaciones {
     final inicial = await mensajeria.getInitialMessage();
     final idInicial = int.tryParse(inicial?.data['incidente_id'] ?? '');
     if (idInicial != null) abrirIncidente(idInicial);
+    _inicializadas = true;
   }
 }

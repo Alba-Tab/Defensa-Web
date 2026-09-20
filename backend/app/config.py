@@ -1,9 +1,10 @@
+import json
 from functools import lru_cache
 from pathlib import Path
-from typing import Literal
+from typing import Annotated, Literal
 
 from pydantic import Field, SecretStr, field_validator, model_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 
 class Ajustes(BaseSettings):
@@ -21,7 +22,7 @@ class Ajustes(BaseSettings):
     ventana_bloqueo_segundos: int = Field(default=60, ge=1)
     duracion_bloqueo_segundos: int = Field(default=600, ge=1)
     ventana_correlacion_segundos: int = Field(default=300, ge=1)
-    lista_blanca: tuple[str, ...] = ("127.0.0.0/8", "::1/128")
+    lista_blanca: Annotated[tuple[str, ...], NoDecode] = ("127.0.0.0/8", "::1/128")
     eve_json: Path = Path("/var/log/suricata/eve.json")
     fail2ban_binario: Path = Path("/usr/bin/fail2ban-client")
     fail2ban_jail: str = "defensa-web"
@@ -42,7 +43,10 @@ class Ajustes(BaseSettings):
     @classmethod
     def separar_lista_blanca(cls, valor: object) -> object:
         if isinstance(valor, str):
-            return tuple(parte.strip() for parte in valor.split(",") if parte.strip())
+            texto = valor.strip()
+            if texto.startswith("["):
+                return tuple(json.loads(texto))
+            return tuple(parte.strip() for parte in texto.split(",") if parte.strip())
         return valor
 
     @field_validator(

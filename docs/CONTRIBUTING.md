@@ -12,7 +12,7 @@
 
 Los commits usan Conventional Commits:
 
-- `feat(servicio): agrega correlacion de eventos`
+- `feat(backend): agrega correlacion de eventos`
 - `fix(politicas): evita duplicar un bloqueo vigente`
 - `test(correlador): cubre vencimiento de ventana`
 - `docs: actualiza instrucciones de desarrollo`

@@ -869,9 +869,10 @@ class Dispositivo(SQLModel, table=True):
 class Auditoria(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     fecha_utc: datetime = Field(default_factory=ahora)
-    usuario: str                          # nombre, o "sistema" si lo decidió la política
+    actor: str                            # nombre, o "sistema" si lo decidió la política
     accion: str
     ip_afectada: str | None = None
+    detalle: str | None = None
 
 class Usuario(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
@@ -891,6 +892,8 @@ def _pragmas(conexion, _):
 def crear_tablas():
     SQLModel.metadata.create_all(engine)
 ```
+
+> **Nota:** este bloque es el borrador ilustrativo de C-26, previo al cierre del modelo de datos. **`Modelo_datos.md` es la fuente de verdad** para el esquema real (tipos, columnas y nombres definitivos: p. ej. `Auditoria.actor` en vez de `usuario`, `Incidente.severidad` como entero, `categoria_owasp` derivada en vez de columna almacenada según ese documento). Ante cualquier diferencia entre este ejemplo y `Modelo_datos.md`, prevalece `Modelo_datos.md`.
 
 Las fechas se guardan en UTC y se convierten al mostrarlas. *Propuesta:* cuando el esquema cambie entre sprints, usar Alembic para migrar sin perder datos; para el Sprint 1 basta con `create_all`.
 
@@ -933,6 +936,10 @@ Un `conftest.py` con fixtures que inyecten `FakeSource`, `DryRunActuator` y una 
 ### 8.5 M5. IA local (datos y entorno)
 
 #### C-29 · Conjunto HTTP CSIC 2010
+
+> **Decisión 2026-09-19:** no se incorpora CSIC 2010 porque la fuente original no está accesible y
+> los catálogos/espejos no aportan una licencia del titular con términos suficientes. Se adopta
+> captura propia de laboratorio. Evidencia y condiciones de revisión en `docs/datos-ia.md`.
 
 1. Búscalo en su fuente original (Instituto de Seguridad de la Información, CSIC) y verifica la licencia y las condiciones de citación en esa página. Si solo aparece en espejos (Kaggle, GitHub), registra de cuál lo descargas.
 2. Guárdalo en `ia/datos/` (no se versiona) y anota en `docs/datos-ia.md`: origen, fecha, licencia y cómo citarlo.
@@ -1040,6 +1047,11 @@ final router = GoRouter(routes: [
 ]);
 ```
 
+> **Estado real (actualizado 2026-09-19):** se mantiene Dio + `flutter_secure_storage` + Navigator
+> por decisión ADR-002. La ruta nominal `/configuracion` está implementada; login, incidentes,
+> detalle, bloqueos y configuración son navegables. Incidentes y bloqueos comparten Inicio por ser
+> un solo flujo operativo del MVP.
+
 Envuelve la app con `ProviderScope`. El interceptor de `dio` que agrega el token se implementa en Pb-8.
 
 **Verifica:** `flutter analyze` sin errores y la app navega entre las cinco pantallas.
@@ -1059,6 +1071,12 @@ Documéntalo como limitación del MVP (solo laboratorio); en producción se usa 
 **Verifica:** desde la app de prueba, una petición `GET http://<IP_VM>/` recibe respuesta.
 
 #### C-37 · Firebase y Cloud Messaging
+
+> **Estado real 2026-09-19:** C-37 configurado con el proyecto `defensaweb-cfc90`. El cliente
+> Android y la cuenta de servicio del backend pertenecen al mismo proyecto; ambos archivos están
+> ignorados por Git. `movil/verificar_firebase.sh` valida el paquete y un APK de depuración con
+> `FCM_HABILITADO=true` compila correctamente. El backend inicia con `NotificadorFirebase`. La
+> recepción en un teléfono y el envío de una alerta real corresponden a la demostración Pb-9/Pb-10.
 
 1. En console.firebase.google.com crea el proyecto (sin Analytics). Agrega una app Android con el `applicationId` de `movil/android/app/build.gradle*` (`bo.uagrm.grupo13.defensa_movil`).
 2. Conecta la app (*propuesta*: FlutterFire CLI):

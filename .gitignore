@@ -14,8 +14,10 @@ htmlcov/
 *.db
 *.db-shm
 *.db-wal
-datos/
+/datos/
+/datos/**
 logs/
+/pruebas/resultados/
 
 # Secrets and local configuration
 .env
@@ -25,7 +27,8 @@ secrets/
 *.pem
 *.key
 firebase-sa.json
-
+movil/android/app/google-services.json
+movil/android/app/google-services.json
 # Editors and operating systems
 .DS_Store
 .idea/
