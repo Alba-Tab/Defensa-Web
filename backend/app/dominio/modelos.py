@@ -28,6 +28,7 @@ class Incidente(SQLModel, table=True):
     categoria_owasp: str | None = None
     informe: str | None = None
     origen_informe: str | None = None
+    modelo_informe: str | None = None
     inicio: datetime = Field(default_factory=ahora_utc)
     ultima_actividad: datetime = Field(default_factory=ahora_utc, index=True)
     eventos: list["Evento"] = Relationship(back_populates="incidente")

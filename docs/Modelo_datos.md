@@ -11,9 +11,9 @@
 |---|---|
 | Motor | SQLite, archivo configurable mediante `DEFENSA_DATABASE_URL` |
 | ORM | SQLModel sobre SQLAlchemy 2 |
-| Migraciones | Alembic, cinco revisiones; revisión cabeza: `0005_notificacion_incidente` |
+| Migraciones | Alembic, seis revisiones; revisión cabeza: `0006_modelo_informe` |
 | Tablas de aplicación | 7: `usuario`, `incidente`, `evento`, `baneo`, `lista_blanca`, `dispositivo`, `auditoria` |
-| Columnas de aplicación | 58 |
+| Columnas de aplicación | 59 |
 | Tabla técnica | `alembic_version` |
 | Fechas | `DATETIME` UTC sin información de zona; se convierten solo al presentar |
 | Integridad referencial | `foreign_keys=ON` en las conexiones creadas por la aplicación |
@@ -32,6 +32,12 @@ alineados con ellas.
 | `0003_accion_evento` | Agrega `evento.accion`, con valor inicial `alerta`. |
 | `0004_entradas_clasificador` | Agrega al evento URI decodificada, parámetros, fragmento de cuerpo, agente de usuario, clase y confianza de IA. |
 | `0005_notificacion_incidente` | Agrega `incidente.severidad_notificada` para no repetir una alerta push. |
+| `0006_modelo_informe` | Agrega `incidente.modelo_informe` para identificar el modelo local que redactó la ficha. |
+
+El 20 de septiembre de 2026 se ejecutó `upgrade head` sobre las dos bases de desarrollo
+existentes (`datos/defensa.db` y `backend/datos/defensa.db`) y ambas quedaron en
+`0006_modelo_informe`. Los archivos SQLite son datos de ejecución y no se versionan; una
+instalación nueva o una copia restaurada debe ejecutar siempre `upgrade head` antes de arrancar.
 
 Comandos desde la raíz del repositorio:
 
@@ -92,8 +98,9 @@ La columna **Desde** identifica la migración que incorporó cada campo.
 | `informe` | VARCHAR | sí |  | 0002 | Informe en lenguaje natural |
 | `origen_informe` | VARCHAR | sí |  | 0002 | `plantilla` o `generado_ia` |
 | `severidad_notificada` | INTEGER | sí |  | 0005 | Última severidad enviada por FCM |
+| `modelo_informe` | VARCHAR | sí |  | 0006 | Modelo local que generó la ficha; nulo para plantilla |
 
-No existen actualmente `total_eventos` ni `modelo_informe`.
+No existe actualmente `total_eventos`.
 
 ### `evento`
 
@@ -221,15 +228,14 @@ revisión; no se debe editar una revisión ya aplicada en entornos compartidos.
 1. La administración persistente de la lista blanca requiere conectar la política con
    `lista_blanca` o decidir formalmente conservar solo la configuración.
 2. El bloqueo progresivo debe usar y actualizar `nivel_reincidencia`; hoy la duración es fija.
-3. El informe con Ollama necesita definir si se agrega `modelo_informe`; el campo no existe.
-4. La retención de eventos y un posible `total_eventos` requieren diseño y migración.
-5. La base no impone un único incidente abierto por IP y categoría. Si se necesita esa garantía
+3. La retención de eventos y un posible `total_eventos` requieren diseño y migración.
+4. La base no impone un único incidente abierto por IP y categoría. Si se necesita esa garantía
    concurrente, debe agregarse una migración y una estrategia de inserción compatible.
-6. Los filtros de historial pueden requerir índices adicionales, especialmente sobre las claves
+5. Los filtros de historial pueden requerir índices adicionales, especialmente sobre las claves
    foráneas y sobre estado/fecha.
-7. `categoria_owasp` se almacena actualmente. Cualquier decisión de derivarla en lectura implica
+6. `categoria_owasp` se almacena actualmente. Cualquier decisión de derivarla en lectura implica
    migración y cambio de código.
-8. `dispositivo.usuario_id` sigue siendo opcional en el esquema, aunque el flujo normal lo llena.
+7. `dispositivo.usuario_id` sigue siendo opcional en el esquema, aunque el flujo normal lo llena.
 
 Estas brechas son trabajo futuro; no describen fallos de migración en la revisión
-`0005_notificacion_incidente`.
+`0006_modelo_informe`.

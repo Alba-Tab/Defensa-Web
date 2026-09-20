@@ -95,6 +95,7 @@ class IncidenteSalida(BaseModel):
     categoria_owasp: str | None
     informe: str | None
     origen_informe: str | None
+    modelo_informe: str | None
     eventos: list[EventoSalida] = Field(default_factory=list)
 
 
