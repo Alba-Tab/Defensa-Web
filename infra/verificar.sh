@@ -17,6 +17,7 @@ comprobar "nginx" nginx -t
 comprobar "Suricata" suricata -T -c /etc/suricata/suricata.yaml -s /etc/suricata/rules/local.rules
 comprobar "nftables" nft -c -f /etc/nftables.conf
 comprobar "Fail2ban" fail2ban-client status defensa-web
+comprobar "servicio de defensa" systemctl is-active --quiet defensa
 comprobar "aplicación protegida" curl -fsS http://127.0.0.1:3000
 comprobar "proxy público" curl -fsS http://127.0.0.1
 

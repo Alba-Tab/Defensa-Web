@@ -26,15 +26,64 @@ class _AplicacionDefensaState extends State<AplicacionDefensa> {
   late final Future<bool> _sesionInicial = _api.inicializar();
   bool? _autenticado;
 
-  Future<void> _activarNotificaciones() =>
-      _notificaciones.inicializar(_api, (id) async {
-        final incidente = await _api.incidente(id);
-        _navegador.currentState?.push(
-          MaterialPageRoute(
-            builder: (_) => PantallaDetalleIncidente(incidente: incidente),
+  @override
+  void initState() {
+    super.initState();
+    _api.alSesionVencida = () {
+      if (!mounted) return;
+      _navegador.currentState?.popUntil((ruta) => ruta.isFirst);
+      setState(() => _autenticado = false);
+    };
+    _sesionInicial.then((autenticado) {
+      if (autenticado && mounted) _activarNotificaciones();
+    });
+  }
+
+  Future<EstadoNotificaciones> _activarNotificaciones() async {
+    final estado = await _notificaciones.inicializar(
+      _api,
+      _abrirIncidente,
+      alertarIncidente: _mostrarAlerta,
+    );
+    if (!mounted) return estado;
+    final contexto = _navegador.currentContext;
+    if (estado == EstadoNotificaciones.permisoDenegado &&
+        contexto != null &&
+        contexto.mounted) {
+      ScaffoldMessenger.of(contexto).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Sin permiso de notificaciones no recibirá alertas push.',
           ),
-        );
-      });
+        ),
+      );
+    }
+    return estado;
+  }
+
+  Future<void> _abrirIncidente(int id) async {
+    final incidente = await _api.incidente(id);
+    if (!mounted) return;
+    _navegador.currentState?.push(
+      MaterialPageRoute(
+        builder: (_) => PantallaDetalleIncidente(incidente: incidente),
+      ),
+    );
+  }
+
+  void _mostrarAlerta(int id, String resumen) {
+    final contexto = _navegador.currentContext;
+    if (contexto == null || !contexto.mounted) return;
+    ScaffoldMessenger.of(contexto).showSnackBar(
+      SnackBar(
+        content: Text(resumen),
+        action: SnackBarAction(
+          label: 'Ver',
+          onPressed: () => _abrirIncidente(id),
+        ),
+      ),
+    );
+  }
 
   void _ingresoCorrecto() {
     setState(() => _autenticado = true);

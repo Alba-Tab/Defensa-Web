@@ -59,3 +59,37 @@ async def test_concilia_baneos_vigentes_expirados_y_huerfanos(tmp_path: Path) ->
     assert set(await actuador.bloqueos()) == {"192.0.2.10"}
     assert {baneo.ip for baneo in Repositorio(motor).baneos_vigentes()} == {"192.0.2.10"}
     motor.dispose()
+
+
+@pytest.mark.asyncio
+async def test_conciliador_reintenta_un_baneo_fallido(tmp_path: Path) -> None:
+    motor = crear_motor(
+        Ajustes(
+            entorno="pruebas",
+            database_url=f"sqlite:///{tmp_path / 'reintento.db'}",
+        )
+    )
+    SQLModel.metadata.create_all(motor)
+    ahora = datetime(2026, 9, 19, 12, 0, 0)
+    with Session(motor) as sesion:
+        incidente = Incidente(ip_origen="192.0.2.30", categoria="sqli", severidad=3)
+        sesion.add(incidente)
+        sesion.flush()
+        assert incidente.id is not None
+        sesion.add(
+            Baneo(
+                ip=incidente.ip_origen,
+                expira=ahora + timedelta(minutes=5),
+                incidente_id=incidente.id,
+                estado="fallido",
+            )
+        )
+        sesion.commit()
+
+    actuador = DryRunActuator()
+    resultado = await Conciliador(Repositorio(motor), actuador).ejecutar(ahora)
+
+    assert resultado.restaurados == 1
+    assert set(await actuador.bloqueos()) == {"192.0.2.30"}
+    assert {baneo.ip for baneo in Repositorio(motor).baneos_vigentes()} == {"192.0.2.30"}
+    motor.dispose()

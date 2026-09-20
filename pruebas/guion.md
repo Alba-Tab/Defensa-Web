@@ -22,8 +22,10 @@
 
 ## Pb-3: descartar y no producir falsos positivos
 
-1. Con la regla `drop` activa, repetir el ataque. La respuesta debe bloquearse o vencer por timeout,
-   según la acción elegida. Confirmar que la petición maliciosa no llegó al access log de nginx.
+1. Con la regla `reject` activa, repetir el ataque. La conexión debe cerrarse de inmediato y la
+   petición maliciosa no debe llegar al access log de nginx. Se eligió `reject` en lugar de `drop`:
+   ambas acciones bloquean, pero `reject` devuelve un TCP reset y evita que el cliente espere hasta
+   agotar su timeout.
 2. Ejecutar navegación legítima durante 30 s (o 10 min para aceptación final):
 
    ```bash
@@ -31,7 +33,7 @@
      bash pruebas/k6/ejecutar_comparacion.sh con-suricata
    ```
 
-3. Confirmar cero alertas `drop` y cero baneos para el origen legítimo.
+3. Confirmar cero alertas `reject` y cero baneos para el origen legítimo.
 4. Desactivar temporalmente la inspección únicamente en la VM aislada y medir la línea base:
 
    ```bash

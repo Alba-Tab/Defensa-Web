@@ -24,6 +24,7 @@ class Incidente(SQLModel, table=True):
     severidad: int = Field(ge=1, le=3)
     estado: str = "abierto"
     confianza_clasificador: float | None = None
+    severidad_notificada: int | None = None
     categoria_owasp: str | None = None
     informe: str | None = None
     origen_informe: str | None = None
@@ -41,8 +42,15 @@ class Evento(SQLModel, table=True):
     firma: str
     categoria: str
     severidad_firma: int = Field(ge=1, le=3)
+    accion: str = "alerta"
     metodo: str | None = None
     url: str | None = None
+    uri_decodificada: str | None = None
+    parametros: str | None = None
+    cuerpo_fragmento: str | None = None
+    user_agent: str | None = None
+    clase_ia: str | None = None
+    confianza_ia: float | None = None
     incidente_id: int = Field(foreign_key="incidente.id")
     incidente: Incidente | None = Relationship(back_populates="eventos")
 

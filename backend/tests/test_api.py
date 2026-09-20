@@ -2,6 +2,9 @@ import asyncio
 from datetime import UTC, datetime
 
 from fastapi.testclient import TestClient
+from sqlmodel import Session, select
+
+from app.dominio.modelos import Auditoria, Dispositivo
 
 
 def evento(ip: str = "192.0.2.10") -> dict[str, object]:
@@ -18,18 +21,37 @@ def evento(ip: str = "192.0.2.10") -> dict[str, object]:
 
 
 def test_salud_informa_modo_simulado(cliente: TestClient) -> None:
-    respuesta = cliente.get("/api/salud")
+    token = iniciar_sesion(cliente)
+    respuesta = cliente.get("/api/salud", headers={"Authorization": f"Bearer {token}"})
 
     assert respuesta.status_code == 200
     assert respuesta.json() == {
         "estado": "operativo",
         "modo": "simulado",
         "entorno": "pruebas",
+        "suricata": "no_aplica",
         "fuente_eventos": "FakeSource",
         "actuador": "DryRunActuator",
         "clasificador": "ClasificadorNulo",
         "notificador": "NotificadorNulo",
     }
+
+
+def test_salud_informa_estado_degradado_si_suricata_esta_inactivo(
+    cliente: TestClient,
+) -> None:
+    class MonitorInactivo:
+        def estado(self) -> str:
+            return "inactivo"
+
+    cliente.app.state.monitor_suricata = MonitorInactivo()
+    token = iniciar_sesion(cliente)
+
+    respuesta = cliente.get("/api/salud", headers={"Authorization": f"Bearer {token}"})
+
+    assert respuesta.status_code == 200
+    assert respuesta.json()["estado"] == "degradado"
+    assert respuesta.json()["suricata"] == "inactivo"
 
 
 def iniciar_sesion(cliente: TestClient) -> str:
@@ -50,9 +72,58 @@ def test_api_operativa_exige_token(cliente: TestClient) -> None:
     assert con_token.status_code == 200
 
 
+def test_detalle_incidente_incluye_sus_eventos(cliente: TestClient) -> None:
+    token = iniciar_sesion(cliente)
+    cabeceras = {"Authorization": f"Bearer {token}"}
+    creado = cliente.post("/api/simulacion/eventos", json=evento("192.0.2.30"), headers=cabeceras)
+
+    respuesta = cliente.get(f"/api/incidentes/{creado.json()['incidente_id']}", headers=cabeceras)
+
+    assert respuesta.status_code == 200
+    assert len(respuesta.json()["eventos"]) == 1
+    assert respuesta.json()["eventos"][0]["ip_origen"] == "192.0.2.30"
+    assert respuesta.json()["eventos"][0]["accion"] == "alerta"
+    assert respuesta.json()["eventos"][0]["clase_ia"] == "indeterminado"
+    assert respuesta.json()["eventos"][0]["confianza_ia"] == 0
+
+
+def test_registrar_dispositivo_es_idempotente_y_actualiza_fecha(cliente: TestClient) -> None:
+    token_sesion = iniciar_sesion(cliente)
+    cabeceras = {"Authorization": f"Bearer {token_sesion}"}
+    token_fcm = "token-fcm-de-prueba-123456"
+
+    primera = cliente.post(
+        "/api/dispositivos",
+        json={"token_fcm": token_fcm, "plataforma": "android"},
+        headers=cabeceras,
+    )
+    with Session(cliente.app.state.motor) as sesion:
+        antes = sesion.exec(select(Dispositivo).where(Dispositivo.token_fcm == token_fcm)).one()
+        alta = antes.alta
+        actualizado_antes = antes.actualizado_en
+    segunda = cliente.post(
+        "/api/dispositivos",
+        json={"token_fcm": token_fcm, "plataforma": "ios"},
+        headers=cabeceras,
+    )
+
+    with Session(cliente.app.state.motor) as sesion:
+        dispositivos = list(sesion.exec(select(Dispositivo)).all())
+    assert primera.status_code == 204
+    assert segunda.status_code == 204
+    assert len(dispositivos) == 1
+    assert dispositivos[0].plataforma == "ios"
+    assert dispositivos[0].alta == alta
+    assert dispositivos[0].actualizado_en >= actualizado_antes
+
+
 def test_cinco_eventos_crean_un_incidente_y_un_baneo(cliente: TestClient) -> None:
-    respuestas = [cliente.post("/api/simulacion/eventos", json=evento()) for _ in range(5)]
-    sexto = cliente.post("/api/simulacion/eventos", json=evento())
+    token = iniciar_sesion(cliente)
+    cabeceras = {"Authorization": f"Bearer {token}"}
+    respuestas = [
+        cliente.post("/api/simulacion/eventos", json=evento(), headers=cabeceras) for _ in range(5)
+    ]
+    sexto = cliente.post("/api/simulacion/eventos", json=evento(), headers=cabeceras)
 
     assert all(respuesta.status_code == 201 for respuesta in respuestas)
     incidentes = {respuesta.json()["incidente_id"] for respuesta in respuestas}
@@ -65,8 +136,11 @@ def test_cinco_eventos_crean_un_incidente_y_un_baneo(cliente: TestClient) -> Non
 
 
 def test_lista_blanca_nunca_se_banea(cliente: TestClient) -> None:
+    token = iniciar_sesion(cliente)
+    cabeceras = {"Authorization": f"Bearer {token}"}
     respuestas = [
-        cliente.post("/api/simulacion/eventos", json=evento("127.0.0.1")) for _ in range(5)
+        cliente.post("/api/simulacion/eventos", json=evento("127.0.0.1"), headers=cabeceras)
+        for _ in range(5)
     ]
 
     assert all(respuesta.status_code == 201 for respuesta in respuestas)
@@ -75,17 +149,27 @@ def test_lista_blanca_nunca_se_banea(cliente: TestClient) -> None:
 
 
 def test_ip_invalida_se_rechaza_sin_accion_externa(cliente: TestClient) -> None:
-    respuesta = cliente.post("/api/simulacion/eventos", json=evento("no-es-ip"))
+    token = iniciar_sesion(cliente)
+    respuesta = cliente.post(
+        "/api/simulacion/eventos",
+        json=evento("no-es-ip"),
+        headers={"Authorization": f"Bearer {token}"},
+    )
 
     assert respuesta.status_code == 422
     assert asyncio.run(cliente.app.state.actuador.bloqueos()) == {}
 
 
 def test_circuito_movil_lista_y_libera_baneo(cliente: TestClient) -> None:
-    for _ in range(5):
-        assert cliente.post("/api/simulacion/eventos", json=evento("192.0.2.44")).status_code == 201
     token = iniciar_sesion(cliente)
     cabeceras = {"Authorization": f"Bearer {token}"}
+    for _ in range(5):
+        assert (
+            cliente.post(
+                "/api/simulacion/eventos", json=evento("192.0.2.44"), headers=cabeceras
+            ).status_code
+            == 201
+        )
 
     incidentes = cliente.get("/api/incidentes", headers=cabeceras)
     baneos = cliente.get("/api/baneos", headers=cabeceras)
@@ -97,3 +181,17 @@ def test_circuito_movil_lista_y_libera_baneo(cliente: TestClient) -> None:
     assert baneos.json()[0]["estado"] == "vigente"
     assert liberacion.json() == {"estado": "liberado", "ip": "192.0.2.44"}
     assert baneos_actualizados.json()[0]["estado"] == "liberado"
+    assert asyncio.run(cliente.app.state.actuador.bloqueos()) == {}
+    segunda_liberacion = cliente.post("/api/baneos/192.0.2.44/liberar", headers=cabeceras)
+    assert segunda_liberacion.status_code == 200
+    with Session(cliente.app.state.motor) as sesion:
+        auditorias = list(
+            sesion.exec(
+                select(Auditoria).where(
+                    Auditoria.accion == "liberacion_manual",
+                    Auditoria.ip_afectada == "192.0.2.44",
+                )
+            ).all()
+        )
+    assert auditorias
+    assert all(auditoria.actor == "admin" for auditoria in auditorias)

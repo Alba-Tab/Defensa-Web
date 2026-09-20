@@ -7,7 +7,8 @@ WORKDIR /opt/defensa
 COPY pyproject.toml README.md alembic.ini ./
 COPY alembic ./alembic
 COPY app ./app
-RUN python -m pip install --no-cache-dir .
+COPY modelos ./modelos
+RUN python -m pip install --no-cache-dir '.[real]'
 
 RUN addgroup --system defensa && adduser --system --ingroup defensa defensa \
     && mkdir -p /datos && chown defensa:defensa /datos

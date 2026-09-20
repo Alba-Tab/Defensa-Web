@@ -9,6 +9,7 @@ from sqlmodel import Session, select
 from app.api.auth import router as router_auth
 from app.api.baneos import router as router_baneos
 from app.api.dispositivos import router as router_dispositivos
+from app.api.eventos import router as router_eventos
 from app.api.incidentes import router as router_incidentes
 from app.api.salud import router as router_salud
 from app.api.simulacion import router as router_simulacion
@@ -16,14 +17,25 @@ from app.componentes.actuador import ActuadorBloqueo, DryRunActuator, Fail2banAc
 from app.componentes.clasificador import Clasificador, ClasificadorJoblib, ClasificadorNulo
 from app.componentes.conciliador import Conciliador
 from app.componentes.correlador import Correlador
+from app.componentes.estado_componentes import (
+    MonitorSuricata,
+    MonitorSuricataSimulado,
+    MonitorSuricataSystemd,
+)
+from app.componentes.eventos_tiempo_real import BusEventos
 from app.componentes.fuente_eventos import EveSource, FakeSource, FuenteEventos
-from app.componentes.informes import GeneradorInformes, GeneradorOpenRouter, GeneradorPlantilla
+from app.componentes.informes import GeneradorInformes, GeneradorPlantilla
 from app.componentes.notificador import Notificador, NotificadorFirebase, NotificadorNulo
 from app.componentes.politicas import MotorPoliticas
 from app.config import Ajustes, obtener_ajustes
 from app.database import crear_motor
 from app.dominio.modelos import Usuario
-from app.integracion import cancelar_tarea, consumir_eventos, enriquecer_incidentes
+from app.integracion import (
+    cancelar_tarea,
+    consumir_eventos,
+    enriquecer_incidentes,
+    mantener_estado,
+)
 from app.repositorio import Repositorio
 from app.seguridad import LimitadorLogin, ServicioContrasenas, ServicioTokens
 from app.servicios import ProcesadorEventos
@@ -34,12 +46,19 @@ def crear_aplicacion(ajustes: Ajustes | None = None) -> FastAPI:
     motor = crear_motor(configuracion)
     fuente: FuenteEventos
     actuador: ActuadorBloqueo
+    monitor_suricata: MonitorSuricata
     if configuracion.modo == "real":
         fuente = EveSource(configuracion.eve_json)
         actuador = Fail2banActuator(configuracion.fail2ban_binario, configuracion.fail2ban_jail)
+        monitor_suricata = MonitorSuricataSystemd(
+            configuracion.systemctl_binario,
+            configuracion.suricata_servicio,
+            configuracion.salud_timeout_segundos,
+        )
     else:
         fuente = FakeSource()
         actuador = DryRunActuator()
+        monitor_suricata = MonitorSuricataSimulado()
 
     clasificador: Clasificador
     if configuracion.modelo_clasificador and configuracion.modelo_clasificador.exists():
@@ -49,17 +68,7 @@ def crear_aplicacion(ajustes: Ajustes | None = None) -> FastAPI:
     else:
         clasificador = ClasificadorNulo()
 
-    generador: GeneradorInformes
-    if configuracion.openrouter_api_key and configuracion.openrouter_modelo:
-        generador = GeneradorOpenRouter(
-            configuracion.openrouter_url,
-            configuracion.openrouter_api_key.get_secret_value(),
-            configuracion.openrouter_modelo,
-            configuracion.timeout_ia_segundos,
-            configuracion.openrouter_referer,
-        )
-    else:
-        generador = GeneradorPlantilla()
+    generador: GeneradorInformes = GeneradorPlantilla()
 
     notificador: Notificador = (
         NotificadorFirebase(configuracion.fcm_credenciales)
@@ -84,14 +93,20 @@ def crear_aplicacion(ajustes: Ajustes | None = None) -> FastAPI:
         else secrets.token_urlsafe(48)
     )
     tokens = ServicioTokens(secreto, configuracion.token_minutos)
-    limitador_login = LimitadorLogin()
+    limitador_login = LimitadorLogin(
+        max_intentos=configuracion.login_max_intentos,
+        ventana_segundos=configuracion.login_ventana_segundos,
+        bloqueo_segundos=configuracion.login_bloqueo_segundos,
+    )
     cola_enriquecimiento: asyncio.Queue[int] = asyncio.Queue(maxsize=1000)
+    bus_eventos = BusEventos()
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         app.state.ajustes = configuracion
         app.state.motor = motor
         app.state.fuente = fuente
+        app.state.monitor_suricata = monitor_suricata
         app.state.actuador = actuador
         app.state.clasificador = clasificador
         app.state.notificador = notificador
@@ -102,6 +117,7 @@ def crear_aplicacion(ajustes: Ajustes | None = None) -> FastAPI:
         app.state.tokens = tokens
         app.state.limitador_login = limitador_login
         app.state.cola_enriquecimiento = cola_enriquecimiento
+        app.state.bus_eventos = bus_eventos
 
         if configuracion.admin_password:
             with Session(motor) as sesion:
@@ -123,7 +139,13 @@ def crear_aplicacion(ajustes: Ajustes | None = None) -> FastAPI:
         app.state.resultado_conciliacion = resultado_conciliacion
 
         tarea_enriquecimiento = asyncio.create_task(
-            enriquecer_incidentes(cola_enriquecimiento, motor, generador, notificador),
+            enriquecer_incidentes(
+                cola_enriquecimiento,
+                motor,
+                generador,
+                notificador,
+                bus_eventos,
+            ),
             name="enriquecer-incidentes",
         )
         tarea_ingesta = (
@@ -134,8 +156,18 @@ def crear_aplicacion(ajustes: Ajustes | None = None) -> FastAPI:
             if configuracion.modo == "real"
             else None
         )
+        tarea_mantenimiento = asyncio.create_task(
+            mantener_estado(
+                repositorio,
+                conciliador,
+                cola_enriquecimiento,
+                configuracion.intervalo_mantenimiento_segundos,
+            ),
+            name="mantener-incidentes",
+        )
         yield
         await cancelar_tarea(tarea_ingesta)
+        await cancelar_tarea(tarea_mantenimiento)
         await cancelar_tarea(tarea_enriquecimiento)
         motor.dispose()
 
@@ -150,6 +182,7 @@ def crear_aplicacion(ajustes: Ajustes | None = None) -> FastAPI:
     aplicacion.include_router(router_incidentes, prefix="/api")
     aplicacion.include_router(router_baneos, prefix="/api")
     aplicacion.include_router(router_dispositivos, prefix="/api")
+    aplicacion.include_router(router_eventos, prefix="/api")
     return aplicacion
 
 

@@ -85,7 +85,7 @@ class _PantallaInicioState extends State<PantallaInicio> {
               (incidente) => ListTile(
                 leading: CircleAvatar(child: Text('${incidente.severidad}')),
                 title: Text(incidente.tipoAtaque),
-                subtitle: Text(incidente.ipOrigen),
+                subtitle: Text('${incidente.ipOrigen} · ${incidente.estado}'),
                 onTap: () => Navigator.push(
                   context,
                   MaterialPageRoute(

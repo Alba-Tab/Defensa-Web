@@ -28,10 +28,15 @@ class MotorPoliticas:
         if any(origen in red for red in self._redes_permitidas):
             return None
 
-        vigente = sesion.exec(
-            select(Baneo).where(Baneo.ip == incidente.ip_origen, Baneo.estado == "vigente")
+        existente = sesion.exec(
+            select(Baneo)
+            .where(
+                Baneo.ip == incidente.ip_origen,
+                col(Baneo.estado).in_(["vigente", "fallido"]),
+            )
+            .order_by(col(Baneo.inicio).desc())
         ).first()
-        if vigente is not None:
+        if existente is not None and existente.estado == "vigente":
             return None
 
         desde = ahora - self._ventana
@@ -46,14 +51,39 @@ class MotorPoliticas:
             return None
 
         expira = ahora + self._duracion
-        await self._actuador.bloquear(incidente.ip_origen, expira)
         assert incidente.id is not None
-        baneo = Baneo(ip=incidente.ip_origen, expira=expira, incidente_id=incidente.id)
+        baneo = existente or Baneo(
+            ip=incidente.ip_origen,
+            expira=expira,
+            incidente_id=incidente.id,
+            estado="pendiente",
+        )
+        baneo.expira = expira
+        sesion.add(baneo)
+        sesion.flush()
+        try:
+            await self._actuador.bloquear(incidente.ip_origen, expira)
+        except Exception as error:
+            baneo.estado = "fallido"
+            sesion.add(baneo)
+            sesion.add(
+                Auditoria(
+                    actor="sistema",
+                    accion="bloqueo_fallido",
+                    ip_afectada=incidente.ip_origen,
+                    detalle=str(error)[:500],
+                )
+            )
+            sesion.flush()
+            return baneo
+
+        reintento = existente is not None
+        baneo.estado = "vigente"
         sesion.add(baneo)
         sesion.add(
             Auditoria(
                 actor="sistema",
-                accion="bloqueo_automatico",
+                accion="bloqueo_reintentado" if reintento else "bloqueo_automatico",
                 ip_afectada=incidente.ip_origen,
                 detalle=f"umbral={self._umbral};duracion_segundos={int(self._duracion.total_seconds())}",
             )

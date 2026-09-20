@@ -68,6 +68,17 @@ class Repositorio:
                 sesion.expunge(baneo)
             return baneos
 
+    def baneos_conciliables(self) -> list[Baneo]:
+        with Session(self._motor) as sesion:
+            baneos = list(
+                sesion.exec(
+                    select(Baneo).where(col(Baneo.estado).in_(["vigente", "fallido"]))
+                ).all()
+            )
+            for baneo in baneos:
+                sesion.expunge(baneo)
+            return baneos
+
     def cambiar_estado_baneo(
         self,
         baneo_id: int,
@@ -105,3 +116,29 @@ class Repositorio:
     def contar_eventos(self) -> int:
         with Session(self._motor) as sesion:
             return len(sesion.exec(select(Evento.id)).all())
+
+    def cerrar_incidentes_inactivos(self, ahora: datetime) -> list[int]:
+        limite = ahora - self._correlador.ventana
+        cerrados: list[int] = []
+        with self.transaccion() as sesion:
+            candidatos = sesion.exec(
+                select(Incidente).where(
+                    Incidente.estado == "abierto",
+                    Incidente.ultima_actividad <= limite,
+                )
+            ).all()
+            for incidente in candidatos:
+                assert incidente.id is not None
+                baneo_activo = sesion.exec(
+                    select(Baneo.id).where(
+                        Baneo.incidente_id == incidente.id,
+                        Baneo.estado == "vigente",
+                        Baneo.expira > ahora,
+                    )
+                ).first()
+                if baneo_activo is not None:
+                    continue
+                incidente.estado = "cerrado"
+                sesion.add(incidente)
+                cerrados.append(incidente.id)
+        return cerrados

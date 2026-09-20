@@ -360,11 +360,19 @@ Sin tareas en este sprint. Pb-8, Pb-9 y Pb-10 (móvil) son las candidatas natura
 
 ## 6. Pendientes
 
+### 6.1 Resueltas (actualización del 20/09/2026)
+
+| # | Pendiente | Resolución |
+|---|---|---|
+| 1 | Duración del sprint y forma de acreditar Scrum en este parcial | Confirmado con el docente: **2 semanas por sprint** |
+| 3 | Herramienta de gestión y herramienta CASE | Gestión: **Jira**. CASE: **Enterprise Architect** (`docs/sw1.eap`) |
+| 4 | Aplicación de la demostración | Confirmado: **Juice Shop v17.3.0**, ya desplegada (`infra/compose/app-protegida.yaml`) |
+| 6 | RNF-02 (latencia) como criterio de Pb-3 y no como HU propia | Confirmado: quedó como criterio de aceptación de Pb-3 (ver tarjeta F4 en `Sprint1_Cimientos_y_Tarjetas_HU.md`), no como HU propia. El valor numérico del umbral sigue sin medir |
+
+### 6.2 Siguen abiertas
+
 | # | Pendiente | Propuesta por defecto |
 |---|---|---|
-| 1 | Duración del sprint y forma de acreditar Scrum en este parcial | Consultar al docente |
 | 2 | Product Owner, Scrum Master, desarrolladores y cliente clave | **[POR DEFINIR]** |
-| 3 | Herramienta de gestión y herramienta CASE | **[POR DEFINIR]** |
-| 4 | Aplicación de la demostración | Juice Shop (más una realista si hay tiempo) |
 | 5 | PHU de cada HU y HU que entran al sprint | Planning Poker del equipo |
-| 6 | RNF-02 (latencia) como criterio de Pb-3 y no como HU propia | Confirmar con el Product Owner |
+| 7 | Umbral aceptable de latencia añadida (RNF-02) y meta mínima del clasificador | Medir con k6 (`pruebas/guion.md`) antes de fijar el valor |

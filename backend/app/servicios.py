@@ -18,11 +18,14 @@ class ProcesadorEventos:
         try:
             incidente, evento, nuevo = self._correlador.registrar(entrada, sesion)
             clasificacion = await self._clasificador.clasificar(entrada)
+            evento.clase_ia = clasificacion.tipo
+            evento.confianza_ia = clasificacion.confianza
+            sesion.add(evento)
             incidente.confianza_clasificador = clasificacion.confianza
             if clasificacion.tipo != "indeterminado":
                 incidente.tipo_ataque = clasificacion.tipo
             if clasificacion.severidad is not None:
-                incidente.severidad = min(incidente.severidad, clasificacion.severidad)
+                incidente.severidad = max(incidente.severidad, clasificacion.severidad)
             baneo = await self._politicas.evaluar(incidente, entrada.fecha_utc, sesion)
             sesion.commit()
             sesion.refresh(incidente)

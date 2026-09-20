@@ -11,15 +11,41 @@ class GeneradorInformes(Protocol):
 
 class GeneradorPlantilla:
     async def generar(self, incidente: Incidente) -> tuple[str, str]:
+        urls = [self._texto_plano(evento.url) for evento in incidente.eventos if evento.url]
+        muestra = ", ".join(urls[-3:]) or "sin URL capturada"
+        baneo = next(
+            (elemento for elemento in reversed(incidente.baneos) if elemento.estado == "vigente"),
+            None,
+        )
+        if baneo is not None:
+            accion = f"La IP fue bloqueada temporalmente hasta {baneo.expira.isoformat()} UTC."
+        elif any(evento.accion == "descarte" for evento in incidente.eventos):
+            accion = "La petición maliciosa fue descartada antes de llegar a la aplicación."
+        else:
+            accion = "Solo se generó una alerta; no se aplicó un bloqueo."
+        if incidente.estado == "cerrado":
+            accion += " El incidente se cerró por inactividad."
+
+        recomendaciones = (
+            "Usar consultas parametrizadas, validar las entradas y revisar los eventos "
+            "relacionados."
+            if "sqli" in f"{incidente.tipo_ataque} {incidente.categoria}".lower()
+            else "Revisar los eventos relacionados, validar si existe un falso positivo y mantener "
+            "actualizadas las firmas."
+        )
         informe = (
             f"Qué ocurrió\nSe detectó actividad {incidente.tipo_ataque} desde "
-            f"{incidente.ip_origen}.\n\n"
+            f"{incidente.ip_origen}. Muestra de URL/parámetros: {muestra}.\n\n"
             f"Categoría OWASP\n{incidente.categoria_owasp or 'Pendiente de clasificación'}.\n\n"
-            "Acción aplicada\nEl evento fue registrado y evaluado por la política de defensa.\n\n"
-            "Recomendaciones\nRevisar los eventos relacionados, validar si existe un falso "
-            "positivo y mantener actualizadas las firmas."
+            f"Acción aplicada\n{accion}\n\n"
+            f"Recomendaciones\n{recomendaciones}"
         )
         return informe, "plantilla"
+
+    @staticmethod
+    def _texto_plano(valor: str, limite: int = 300) -> str:
+        limpio = " ".join(valor.replace("\x00", "").split())
+        return limpio[:limite] + ("…" if len(limpio) > limite else "")
 
 
 class GeneradorOpenRouter:

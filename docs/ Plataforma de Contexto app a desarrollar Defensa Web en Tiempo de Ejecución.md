@@ -31,7 +31,7 @@
 | Valorado | Reportes generativos en tiempo real; interfaz de tipo asistente conversacional |
 | Caso local | Cada caso debe ubicarse en un escenario de nuestro medio: **[POR DEFINIR]** (propuesta: comercio electrónico de una pyme) |
 
-> **Decisión de equipo (actualización):** el Requisito técnico 1 exige IA local. Por ahora, mientras se prepara el dataset y se entrena el clasificador/generador local, el generador de informes usa **OpenRouter (API en la nube) solo para pruebas de laboratorio**, con `GeneradorPlantilla` como respaldo automático si no hay clave configurada o la llamada falla. Esto es una desviación temporal y consciente del requisito técnico 1, documentada aquí y en `Modelo_datos.md` (campo `incidente.modelo_informe`). La implementación de la IA local (Ollama u otro modelo entrenado localmente) queda pendiente como tarea a completar antes de la entrega final.
+> **Decisión de equipo (actualización, cerrada tras consulta al docente el 20/09/2026):** el Requisito técnico 1 exige IA local. El docente confirmó que **no es necesario un LLM**: el clasificador entrenado localmente (TF-IDF + modelo scikit-learn, HU Pb-20) **ya cuenta** como la IA local personalizada que exige el parcial. Aun así, el equipo decide implementar Ollama en el **Sprint 2** (HU Pb-19) como mejora del informe, no como condición para cumplir el requisito. Mientras Ollama no esté listo, el generador de informes sigue usando **OpenRouter (API en la nube) solo para pruebas de laboratorio**, con `GeneradorPlantilla` como respaldo automático si no hay clave configurada o la llamada falla, documentado también en `Modelo_datos.md` (campo `incidente.modelo_informe`).
 
 ---
 
@@ -348,30 +348,23 @@ Criterios: se levanta rápido con Docker, poco consumo de RAM, tiene login (fuer
 | **a) Equipo Scrum** | Scrum Master, Product Owner y desarrolladores: **[POR DEFINIR]**. Stakeholder o cliente clave: **[POR DEFINIR]** |
 | **b) Objetivo del producto** | Sección 2 |
 | **c) Requerimientos iniciales** | Sección 4. Épicas candidatas = módulos M1 a M7 |
-| **d) Duración del sprint** | **Decisión abierta.** La regla del docente es 2 a 4 semanas, igual para todos los sprints; la entrega es el 22/09. Consultar al docente cómo se acredita Scrum en este parcial. **No inventar sprints ya ejecutados** |
-| **e) Infraestructura** | Sección 5. Gestión del proyecto: Jira, Trello o Azure DevOps **[POR DEFINIR]** |
+| **d) Duración del sprint** | **Resuelto con el docente (20/09/2026): 2 semanas por sprint**, igual para todos los sprints; la entrega es el 22/09 |
+| **e) Infraestructura** | Sección 5. Gestión del proyecto: **Jira** |
 | **f) Patrón de desarrollo** | Rama `main` protegida y ramas `feature/<HU>` con revisión; commits convencionales; PEP 8 con ruff/black en Python y `dart format` y `flutter analyze` en Flutter; pruebas con pytest y `flutter_test`; interfaces `Fuente de eventos` y `Actuador` para el modo simulado |
 | **g) Modelos iniciales** | Contexto (C4 nivel 1, 6.1), datos (clases, 6.6), arquitectura (C4 nivel 2, 6.2) |
 | **h) Calidad y DoD** | Esenciales: **seguridad e integridad**, **fiabilidad** (fail-open), **eficiencia** (latencia), facilidad de uso, corrección, mantenibilidad (interfaces), portabilidad (VM reproducible). **DoD propuesta:** criterios de aceptación cumplidos; código integrado en `main`; pruebas pasando; verificado en la VM con el ataque del guion; sin secretos en el repositorio; desplegable con un solo comando |
 | **i) Product Backlog (F3)** | Generar HU (Como / Quiero / Para, criterios de aceptación, INVEST) a partir de RF-01 a RF-14. **Los PHU los estima el equipo con Planning Poker, no la IA** |
 
 ### Decisiones cerradas
-Protección en el mismo host con **una aplicación fija** · Suricata IPS + Fail2ban + nftables + nginx · backend único FastAPI + SQLite · panel HTMX · móvil Flutter con notificaciones FCM · IA local (clasificador + Ollama) · VM Ubuntu Server en red bridged o host-only · IA siempre posterior a la detección · modo simulado para desarrollar sin VM.
+Protección en el mismo host con **una aplicación fija** (**Juice Shop v17.3.0**, ya desplegada en `infra/compose/app-protegida.yaml`) · Suricata IPS + Fail2ban + nftables + nginx, insertados en **Modo A** (HTTP en claro; el Modo B con TLS queda diferido como HU Pb-29) · backend único FastAPI + SQLite · panel HTMX · móvil **Flutter** (Android) con notificaciones FCM · autenticación con usuario administrador único, contraseña con hash y token con expiración de 8 h (implementada) · IA local: el clasificador TF-IDF **ya satisface el requisito técnico 1** (confirmado con el docente); Ollama se agrega en el Sprint 2 (Pb-19) como mejora, no como condición · VM Ubuntu Server en red bridged o host-only · IA siempre posterior a la detección · modo simulado para desarrollar sin VM · escenario local: comercio electrónico de una pyme · duración de sprint: **2 semanas** (confirmado con el docente) · herramienta de gestión: **Jira** · herramienta CASE: **Enterprise Architect** (`docs/sw1.eap`) · videos de la exposición: Suricata, Fail2ban y nginx.
 
 ### Decisiones abiertas (con propuesta por defecto)
 
 | # | Decisión | Propuesta por defecto |
 |---|---|---|
-| 1 | Duración del sprint y acreditación de Scrum | Consultar al docente (ver d) |
-| 2 | Aplicación de la demostración | Juice Shop (+ una realista si hay tiempo) |
-| 3 | Escenario local del caso | Comercio electrónico de una pyme |
-| 4 | Videos de herramientas | Suricata, Fail2ban y nginx |
-| 5 | Autenticación | Usuario administrador único, contraseña con hash y token con expiración de 8 h |
-| 6 | Punto de inserción de la cola de Suricata | **Modo A (mínimo):** HTTP en claro en el puerto público, cola en entrada y salida. **Modo B (completo):** TLS en nginx y cola en el tramo nginx→aplicación |
-| 7 | Modelo de lenguaje y dataset | Decidir tras medir latencia en la máquina de demostración |
-| 8 | Ubicación de Ollama | Equipo anfitrión, consultado desde la VM |
-| 9 | Roles Scrum, herramienta de gestión y herramienta CASE | **[POR DEFINIR]** |
-| 10 | Plataforma de la demostración móvil | Android. Compilar para iOS exige Mac, Xcode y cuenta Apple Developer de pago con clave APNs; la multiplataforma se declara como propiedad del código único |
+| 1 | Roles Scrum: Product Owner, Scrum Master, desarrolladores y cliente clave | **[POR DEFINIR]** |
+| 2 | Umbral aceptable de latencia añadida (RNF-02) y meta mínima del clasificador para `sqli` | Medir con k6 en la máquina de demostración (`pruebas/guion.md`) antes de fijar el valor |
+| 3 | Ubicación de Ollama, una vez implementado en el Sprint 2 | Equipo anfitrión, consultado desde la VM |
 
 ### Verificaciones técnicas (spikes) del Sprint 0
 Cada una con criterio de éxito verificable el mismo día:

@@ -1,0 +1,9 @@
+flush ruleset
+
+table inet defensa_prueba {
+    chain inspeccion {
+        type filter hook forward priority 0; policy accept;
+        tcp dport 8080 queue num 0 bypass
+        tcp sport 8080 queue num 0 bypass
+    }
+}

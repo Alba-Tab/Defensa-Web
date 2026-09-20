@@ -7,6 +7,7 @@ services:
       DEFENSA_MODO: simulado
       DEFENSA_DATABASE_URL: sqlite:////datos/defensa.db
       DEFENSA_LISTA_BLANCA: 127.0.0.0/8,::1/128
+      DEFENSA_MODELO_CLASIFICADOR: /opt/defensa/modelos/clasificador.joblib
       DEFENSA_JWT_SECRET: ${DEFENSA_JWT_SECRET:-}
       DEFENSA_ADMIN_USUARIO: ${DEFENSA_ADMIN_USUARIO:-admin}
       DEFENSA_ADMIN_PASSWORD: ${DEFENSA_ADMIN_PASSWORD:-}
@@ -14,13 +15,17 @@ services:
       DEFENSA_OPENROUTER_API_KEY: ${DEFENSA_OPENROUTER_API_KEY:-}
       DEFENSA_OPENROUTER_MODELO: ${DEFENSA_OPENROUTER_MODELO:-}
       DEFENSA_OPENROUTER_REFERER: ${DEFENSA_OPENROUTER_REFERER:-}
-      DEFENSA_FCM_CREDENCIALES: ${DEFENSA_FCM_CREDENCIALES:-}
+      DEFENSA_FCM_CREDENCIALES: /run/secrets/firebase-admin.json
     ports:
       - "8000:8000"
     volumes:
       - defensa-datos:/datos
+      - type: bind
+        source: ${DEFENSA_FCM_CREDENCIALES:-./secrets/firebase-admin.json}
+        target: /run/secrets/firebase-admin.json
+        read_only: true
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/salud')"]
+      test: ["CMD", "python", "-c", "import socket; socket.create_connection(('127.0.0.1', 8000), 2).close()"]
       interval: 10s
       timeout: 3s
       retries: 3

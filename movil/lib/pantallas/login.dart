@@ -20,6 +20,14 @@ class _PantallaLoginState extends State<PantallaLogin> {
   bool _enviando = false;
   String? _error;
 
+  @override
+  void initState() {
+    super.initState();
+    widget.api.servidor().then((valor) {
+      if (mounted && valor.isNotEmpty) _servidor.text = valor;
+    });
+  }
+
   Future<void> _ingresar() async {
     setState(() {
       _enviando = true;
@@ -33,9 +41,12 @@ class _PantallaLoginState extends State<PantallaLogin> {
       );
       widget.alIngresar();
     } on DioException catch (error) {
-      setState(
-        () => _error = error.response?.data.toString() ?? 'No se pudo conectar',
-      );
+      final mensaje = error.response?.statusCode == 401
+          ? 'Usuario o contraseña incorrectos'
+          : 'No se pudo conectar con el servidor';
+      setState(() => _error = mensaje);
+    } on FormatException catch (error) {
+      setState(() => _error = error.message);
     } finally {
       if (mounted) setState(() => _enviando = false);
     }

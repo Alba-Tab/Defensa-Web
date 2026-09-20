@@ -53,6 +53,9 @@ python3 -m venv /opt/defensa/venv
 /opt/defensa/venv/bin/python -m pip install --upgrade pip
 /opt/defensa/venv/bin/python -m pip install '/opt/defensa/backend[real]'
 install -d -m 0750 -o defensa -g defensa /opt/defensa/datos /opt/defensa/modelos
+install -m 0644 -o defensa -g defensa \
+  "${REPO_DIR}/backend/modelos/clasificador.joblib" \
+  /opt/defensa/modelos/clasificador.joblib
 chown -R defensa:defensa /opt/defensa/backend
 
 suricata-update --disable-conf /etc/suricata/disable.conf \
@@ -66,7 +69,7 @@ systemctl enable --now docker nginx
 systemctl enable --now nftables
 systemctl enable --now fail2ban
 systemctl enable --now suricata
-systemctl enable defensa
+systemctl enable --now defensa
 docker compose -f "${REPO_DIR}/infra/compose/app-protegida.yaml" up -d
 
 echo "Aprovisionamiento terminado. Ejecuta: sudo ${REPO_DIR}/infra/verificar.sh"

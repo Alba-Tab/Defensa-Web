@@ -13,7 +13,7 @@ class PantallaConfiguracion extends StatefulWidget {
   static const ruta = '/configuracion';
 
   final ApiDefensa api;
-  final Future<void> Function() activarNotificaciones;
+  final Future<EstadoNotificaciones> Function() activarNotificaciones;
 
   @override
   State<PantallaConfiguracion> createState() => _PantallaConfiguracionState();
@@ -54,8 +54,17 @@ class _PantallaConfiguracionState extends State<PantallaConfiguracion> {
   Future<void> _activarNotificaciones() async {
     setState(() => _mensaje = null);
     try {
-      await widget.activarNotificaciones();
-      setState(() => _mensaje = 'Dispositivo registrado para notificaciones');
+      final estado = await widget.activarNotificaciones();
+      setState(
+        () => _mensaje = switch (estado) {
+          EstadoNotificaciones.activadas =>
+            'Dispositivo registrado para notificaciones',
+          EstadoNotificaciones.permisoDenegado =>
+            'Permiso rechazado: la app seguirá funcionando sin alertas push',
+          EstadoNotificaciones.noDisponibles =>
+            'Firebase no está habilitado en esta compilación',
+        },
+      );
     } catch (error) {
       setState(() => _mensaje = 'No se pudo activar Firebase: $error');
     }

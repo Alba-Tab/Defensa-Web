@@ -9,6 +9,7 @@ class Incidente {
     this.categoriaOwasp,
     this.informe,
     this.origenInforme,
+    this.eventos = const [],
   });
 
   factory Incidente.fromJson(Map<String, dynamic> json) => Incidente(
@@ -21,6 +22,9 @@ class Incidente {
     categoriaOwasp: json['categoria_owasp'] as String?,
     informe: json['informe'] as String?,
     origenInforme: json['origen_informe'] as String?,
+    eventos: (json['eventos'] as List<dynamic>? ?? const [])
+        .map((dato) => EventoIncidente.fromJson(dato as Map<String, dynamic>))
+        .toList(),
   );
 
   final int id;
@@ -32,6 +36,29 @@ class Incidente {
   final String? categoriaOwasp;
   final String? informe;
   final String? origenInforme;
+  final List<EventoIncidente> eventos;
+}
+
+class EventoIncidente {
+  const EventoIncidente({
+    this.metodo,
+    this.url,
+    this.parametros,
+    this.cuerpoFragmento,
+  });
+
+  factory EventoIncidente.fromJson(Map<String, dynamic> json) =>
+      EventoIncidente(
+        metodo: json['metodo'] as String?,
+        url: json['url'] as String?,
+        parametros: json['parametros'] as String?,
+        cuerpoFragmento: json['cuerpo_fragmento'] as String?,
+      );
+
+  final String? metodo;
+  final String? url;
+  final String? parametros;
+  final String? cuerpoFragmento;
 }
 
 class Baneo {

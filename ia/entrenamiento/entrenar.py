@@ -57,7 +57,10 @@ def entrenar(entrada: Path, salida: Path, reporte: Path) -> None:
             (
                 "clasificador",
                 LogisticRegression(
-                    max_iter=1000, class_weight="balanced", random_state=13
+                    C=10,
+                    max_iter=1000,
+                    class_weight="balanced",
+                    random_state=13,
                 ),
             ),
         ]

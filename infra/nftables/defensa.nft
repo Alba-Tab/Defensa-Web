@@ -9,8 +9,13 @@ table inet defensa {
         tcp dport 8000 ip saddr != 192.168.56.0/24 drop
     }
 
-    chain inspeccion {
+    chain inspeccion_entrada {
         type filter hook input priority 0; policy accept;
         tcp dport 80 queue num 0 bypass
+    }
+
+    chain inspeccion_salida {
+        type filter hook output priority 0; policy accept;
+        tcp sport 80 queue num 0 bypass
     }
 }

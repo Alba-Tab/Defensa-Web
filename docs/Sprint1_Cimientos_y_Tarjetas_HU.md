@@ -196,7 +196,7 @@ Pb-1 y Pb-8 no dependen de la detección: el equipo puede construirlas en parale
 | Pb-11 a Pb-14 | XSS, path traversal, escaneo y sondeo de archivos | Aditivas sobre la misma tubería de Pb-2 |
 | Pb-15, Pb-16, Pb-18 | Límite de tasa, bloqueo progresivo, gestión de lista blanca | Refinan algo que ya funciona. Sin Pb-16 no existe la severidad crítica |
 | Pb-17 | Bloqueo por fuerza bruta | Decisión de diseño pendiente sobre cómo registrar en la base los baneos hechos por Fail2ban |
-| Pb-19 | Informe con IA local (Ollama) | Mejora de Pb-7; depende del spike 5 |
+| Pb-19 | Informe con IA local (Ollama) | Mejora de Pb-7; depende del spike 5. Planificada para el Sprint 2 — no es condición para cumplir el requisito técnico 1, que ya satisface el clasificador local (Pb-20), confirmado con el docente |
 | Pb-21 a Pb-26 | Historial con filtros y panel web | El móvil es el único canal del MVP |
 | Pb-29 | Terminación TLS | El MVP inspecciona HTTP en claro (Modo A). Se declara como limitación |
 
@@ -610,15 +610,22 @@ Todas las tarjetas tienen los mismos campos: identificador, nombre corto, priori
 
 ## 5. Pendientes
 
+### 5.1 Resueltas (actualización del 20/09/2026)
+
+| # | Pendiente | Resolución |
+|---|---|---|
+| 2 | Duración del sprint y forma de acreditar Scrum en este parcial | Confirmado con el docente: **2 semanas por sprint**, igual para todos los sprints |
+| 4 | Herramienta de gestión y herramienta CASE | Gestión: **Jira**. CASE: **Enterprise Architect** (`docs/sw1.eap`) |
+| 5 | Aplicación de la demostración | Confirmado: **Juice Shop v17.3.0**, ya desplegada (`infra/compose/app-protegida.yaml`) |
+| 6 | Confirmar la prioridad Alta de Pb-20, Pb-27 y Pb-28 | Confirmada de facto: las tres se implementaron en el Sprint 1 con prioridad Alta |
+| 8 | Si el clasificador basta como "IA personalizada" o debe incluirse el modelo de lenguaje | Confirmado con el docente: el clasificador local (TF-IDF, Pb-20) **ya cumple** el requisito técnico 1; el LLM no es obligatorio. El equipo decide implementar Ollama en el Sprint 2 (Pb-19) como mejora, no como condición |
+| 9 | Tecnología del móvil (Flutter vs Expo) | Confirmado: **Flutter**, ya implementado (`movil/lib/`) |
+| 10 | Pb-6 con 10 criterios: ¿dividir en dos historias? | No se dividió: se implementó como una sola HU con sus 10 criterios |
+
+### 5.2 Siguen abiertas
+
 | # | Pendiente | Propuesta por defecto |
 |---|---|---|
 | 1 | PHU de las 13 HU y capacidad del equipo | Planning Poker (C-50) |
-| 2 | Duración del sprint y forma de acreditar Scrum en este parcial (entrega el 22 de septiembre de 2026) | Consultar al docente (C-02) |
 | 3 | Product Owner, Scrum Master, desarrolladores y cliente clave | **[POR DEFINIR]** (C-01) |
-| 4 | Herramienta de gestión y herramienta CASE | **[POR DEFINIR]** (C-03, C-04) |
-| 5 | Aplicación de la demostración | Juice Shop (C-11) |
-| 6 | Confirmar la prioridad Alta de Pb-20, Pb-27 y Pb-28 | Confirmar con el Product Owner |
-| 7 | Umbral aceptable de latencia añadida (RNF-02) y meta mínima del clasificador | **[POR DEFINIR]** con el Product Owner |
-| 8 | Si el clasificador basta como "IA personalizada" o debe incluirse el modelo de lenguaje | Confirmar con el docente |
-| 9 | Tecnología del móvil: este documento asume Flutter y FCM, según el archivo de contexto del proyecto. Si el equipo mantiene Expo con Expo Push, cambian C-34 a C-38, C-45 y los criterios de Pb-9 y Pb-10 | Confirmar antes de C-34 |
-| 10 | Pb-6 tiene 10 criterios. Si sale muy alta en Planning Poker, conviene dividirla en "bloqueo por umbral" y "protección de IPs de confianza y auditoría" | Decidir en el Planning |
+| 7 | Umbral aceptable de latencia añadida (RNF-02) y meta mínima del clasificador | **[POR DEFINIR]**; medir con k6 (`pruebas/guion.md`) antes de fijar el valor |

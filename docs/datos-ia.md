@@ -44,3 +44,9 @@ calidad del modelo final.
 Se puede reconsiderar CSIC 2010 si aparece una fuente oficial accesible con licencia explícita y
 condiciones de citación. Hasta entonces, la evaluación del modelo debe declarar que usa datos
 propios y que la muestra sintética solo prueba la cadena técnica.
+
+## Meta inicial de evaluación
+
+Tras la primera evaluación se fija para la clase `sqli` una precisión y una exhaustividad mínimas
+de 0,80 sobre el conjunto de prueba. La muestra versionada solo valida la cadena técnica; antes de
+una demostración de calidad se debe repetir la evaluación con captura propia independiente.

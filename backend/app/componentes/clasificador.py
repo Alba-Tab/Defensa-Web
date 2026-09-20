@@ -25,12 +25,12 @@ class ClasificadorNulo:
 
 class ClasificadorJoblib:
     _severidades: ClassVar[dict[str, int]] = {
-        "sqli": 1,
-        "xss": 1,
-        "traversal": 1,
+        "sqli": 3,
+        "xss": 3,
+        "traversal": 3,
         "escaneo": 2,
         "fuerza_bruta": 2,
-        "benigno": 3,
+        "benigno": 1,
     }
 
     def __init__(self, ruta_modelo: Path, umbral: float) -> None:
@@ -45,9 +45,11 @@ class ClasificadorJoblib:
             parte
             for parte in (
                 evento.metodo,
-                evento.url,
+                evento.uri_decodificada or evento.url,
+                evento.parametros,
+                evento.cuerpo_fragmento,
+                evento.user_agent,
                 evento.categoria,
-                evento.firma,
             )
             if parte
         )

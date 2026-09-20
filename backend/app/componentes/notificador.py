@@ -40,7 +40,12 @@ class NotificadorFirebase:
                 title=f"Incidente de severidad {incidente.severidad}",
                 body=f"{incidente.tipo_ataque} desde {incidente.ip_origen}",
             ),
-            data={"incidente_id": str(incidente.id)},
+            data={
+                "incidente_id": str(incidente.id),
+                "tipo_ataque": incidente.tipo_ataque,
+                "severidad": str(incidente.severidad),
+                "ip_origen": incidente.ip_origen,
+            },
             tokens=tokens[:500],
         )
         respuesta = await asyncio.to_thread(
@@ -48,6 +53,9 @@ class NotificadorFirebase:
         )
         invalidos: set[str] = set()
         for token, resultado in zip(tokens, respuesta.responses, strict=False):
-            if not resultado.success and "UNREGISTERED" in str(resultado.exception).upper():
+            if not resultado.success and (
+                isinstance(resultado.exception, messaging.UnregisteredError)
+                or "UNREGISTERED" in str(resultado.exception).upper()
+            ):
                 invalidos.add(token)
         return invalidos

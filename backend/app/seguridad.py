@@ -50,19 +50,37 @@ class ServicioTokens:
 
 
 class LimitadorLogin:
-    def __init__(self, max_intentos: int = 5, ventana_segundos: int = 60) -> None:
+    def __init__(
+        self,
+        max_intentos: int = 5,
+        ventana_segundos: int = 60,
+        bloqueo_segundos: int = 300,
+    ) -> None:
         self._max_intentos = max_intentos
         self._ventana = timedelta(seconds=ventana_segundos)
+        self._duracion_bloqueo = timedelta(seconds=bloqueo_segundos)
         self._intentos: defaultdict[str, deque[datetime]] = defaultdict(deque)
+        self._bloqueados_hasta: dict[str, datetime] = {}
         self._lock = Lock()
 
     def bloqueado(self, ip: str, ahora: datetime) -> bool:
         with self._lock:
+            bloqueado_hasta = self._bloqueados_hasta.get(ip)
+            if bloqueado_hasta is not None:
+                if ahora < bloqueado_hasta:
+                    return True
+                self._bloqueados_hasta.pop(ip, None)
+                self._intentos.pop(ip, None)
+
             intentos = self._intentos[ip]
             limite = ahora - self._ventana
             while intentos and intentos[0] < limite:
                 intentos.popleft()
-            return len(intentos) >= self._max_intentos
+            if len(intentos) < self._max_intentos:
+                return False
+
+            self._bloqueados_hasta[ip] = ahora + self._duracion_bloqueo
+            return True
 
     def registrar_fallo(self, ip: str, ahora: datetime) -> None:
         with self._lock:
@@ -71,3 +89,4 @@ class LimitadorLogin:
     def limpiar(self, ip: str) -> None:
         with self._lock:
             self._intentos.pop(ip, None)
+            self._bloqueados_hasta.pop(ip, None)

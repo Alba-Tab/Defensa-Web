@@ -13,8 +13,13 @@ class EventoEntrada(BaseModel):
     firma: str = Field(min_length=1, max_length=500)
     categoria: str = Field(min_length=1, max_length=200)
     severidad_firma: int = Field(ge=1, le=3)
+    accion: str = Field(default="alerta", pattern="^(alerta|descarte)$")
     metodo: str | None = Field(default=None, max_length=16)
     url: str | None = Field(default=None, max_length=2048)
+    uri_decodificada: str | None = Field(default=None, max_length=2048)
+    parametros: str | None = Field(default=None, max_length=4096)
+    cuerpo_fragmento: str | None = Field(default=None, max_length=2048)
+    user_agent: str | None = Field(default=None, max_length=1024)
 
     @field_validator("ip_origen")
     @classmethod
@@ -52,6 +57,28 @@ class DispositivoEntrada(BaseModel):
     plataforma: str = Field(pattern="^(android|ios)$")
 
 
+class EventoSalida(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    fecha_utc: datetime
+    ip_origen: str
+    sid: int
+    firma: str
+    categoria: str
+    severidad_firma: int
+    accion: str
+    metodo: str | None
+    url: str | None
+    uri_decodificada: str | None
+    parametros: str | None
+    cuerpo_fragmento: str | None
+    user_agent: str | None
+    clase_ia: str | None
+    confianza_ia: float | None
+    incidente_id: int
+
+
 class IncidenteSalida(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -64,9 +91,11 @@ class IncidenteSalida(BaseModel):
     inicio: datetime
     ultima_actividad: datetime
     confianza_clasificador: float | None
+    severidad_notificada: int | None
     categoria_owasp: str | None
     informe: str | None
     origen_informe: str | None
+    eventos: list[EventoSalida] = Field(default_factory=list)
 
 
 class BaneoSalida(BaseModel):

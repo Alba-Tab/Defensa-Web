@@ -36,10 +36,10 @@ class Conciliador:
         expirados = 0
         huerfanos = 0
         errores = 0
-        vigentes = self._repositorio.baneos_vigentes()
-        ips_vigentes = {baneo.ip for baneo in vigentes if baneo.expira > instante}
+        conciliables = self._repositorio.baneos_conciliables()
+        ips_vigentes = {baneo.ip for baneo in conciliables if baneo.expira > instante}
 
-        for baneo in vigentes:
+        for baneo in conciliables:
             assert baneo.id is not None
             if baneo.expira <= instante:
                 try:
@@ -56,10 +56,21 @@ class Conciliador:
                     errores += 1
                     logger.exception("No se pudo expirar el baneo %s", baneo.id)
                     self._marcar_fallido(baneo.id, error)
-            elif baneo.ip not in reales:
+            elif baneo.ip in reales:
+                if baneo.estado != "vigente":
+                    self._repositorio.cambiar_estado_baneo(
+                        baneo.id,
+                        "vigente",
+                        accion="conciliacion_confirmado",
+                    )
+            else:
                 try:
                     await self._actuador.bloquear(baneo.ip, baneo.expira)
-                    self._repositorio.registrar_auditoria("conciliacion_restaurado", baneo.ip)
+                    self._repositorio.cambiar_estado_baneo(
+                        baneo.id,
+                        "vigente",
+                        accion="conciliacion_restaurado",
+                    )
                     restaurados += 1
                 except Exception as error:
                     errores += 1

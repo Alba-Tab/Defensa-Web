@@ -22,12 +22,19 @@ class Ajustes(BaseSettings):
     ventana_bloqueo_segundos: int = Field(default=60, ge=1)
     duracion_bloqueo_segundos: int = Field(default=600, ge=1)
     ventana_correlacion_segundos: int = Field(default=300, ge=1)
+    intervalo_mantenimiento_segundos: float = Field(default=5, gt=0, le=300)
     lista_blanca: Annotated[tuple[str, ...], NoDecode] = ("127.0.0.0/8", "::1/128")
     eve_json: Path = Path("/var/log/suricata/eve.json")
+    systemctl_binario: Path = Path("/usr/bin/systemctl")
+    suricata_servicio: str = "suricata"
+    salud_timeout_segundos: float = Field(default=2, gt=0, le=10)
     fail2ban_binario: Path = Path("/usr/bin/fail2ban-client")
     fail2ban_jail: str = "defensa-web"
     jwt_secret: SecretStr | None = None
     token_minutos: int = Field(default=480, ge=5, le=1440)
+    login_max_intentos: int = Field(default=5, ge=1, le=100)
+    login_ventana_segundos: int = Field(default=60, ge=1)
+    login_bloqueo_segundos: int = Field(default=300, ge=1)
     admin_usuario: str = "admin"
     admin_password: SecretStr | None = None
     modelo_clasificador: Path | None = None

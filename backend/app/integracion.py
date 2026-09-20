@@ -5,10 +5,14 @@ from contextlib import suppress
 from sqlalchemy import Engine
 from sqlmodel import Session, col, select
 
+from app.componentes.conciliador import Conciliador
+from app.componentes.eventos_tiempo_real import AlertaIncidente, BusEventos
 from app.componentes.fuente_eventos import FuenteEventos
 from app.componentes.informes import GeneradorInformes
 from app.componentes.notificador import Notificador
-from app.dominio.modelos import Dispositivo, Incidente
+from app.dominio.esquemas import EventoEntrada
+from app.dominio.modelos import Dispositivo, Incidente, ahora_utc
+from app.repositorio import Repositorio
 from app.servicios import ProcesadorEventos
 
 logger = logging.getLogger(__name__)
@@ -20,17 +24,42 @@ async def consumir_eventos(
     motor: Engine,
     cola_enriquecimiento: asyncio.Queue[int],
 ) -> None:
-    async for evento in fuente.eventos():
-        try:
-            with Session(motor) as sesion:
-                resultado = await procesador.procesar(evento, sesion)
-            if resultado.incidente_nuevo:
+    cola_ingesta: asyncio.Queue[EventoEntrada] = asyncio.Queue(maxsize=1000)
+
+    async def procesar_cola() -> None:
+        while True:
+            evento = await cola_ingesta.get()
+            try:
+                with Session(motor) as sesion:
+                    resultado = await procesador.procesar(evento, sesion)
                 await cola_enriquecimiento.put(resultado.incidente_id)
-        except asyncio.CancelledError:
-            raise
-        except Exception:
-            logger.exception("No se pudo procesar un evento de eve.json")
-            continue
+            except asyncio.CancelledError:
+                raise
+            except Exception:
+                logger.exception("No se pudo procesar un evento de eve.json")
+            finally:
+                cola_ingesta.task_done()
+
+    trabajador = asyncio.create_task(procesar_cola(), name="procesar-eventos-eve")
+    try:
+        async for evento in fuente.eventos():
+            await cola_ingesta.put(evento)
+    finally:
+        await cancelar_tarea(trabajador)
+
+
+async def mantener_estado(
+    repositorio: Repositorio,
+    conciliador: Conciliador,
+    cola_enriquecimiento: asyncio.Queue[int],
+    intervalo_segundos: float = 5,
+) -> None:
+    while True:
+        await asyncio.sleep(intervalo_segundos)
+        await conciliador.ejecutar()
+        cerrados = repositorio.cerrar_incidentes_inactivos(ahora_utc())
+        for incidente_id in cerrados:
+            await cola_enriquecimiento.put(incidente_id)
 
 
 def categoria_owasp(tipo: str, categoria_firma: str) -> str:
@@ -49,6 +78,7 @@ async def enriquecer_incidentes(
     motor: Engine,
     generador: GeneradorInformes,
     notificador: Notificador,
+    bus_eventos: BusEventos,
 ) -> None:
     while True:
         incidente_id = await cola.get()
@@ -60,6 +90,8 @@ async def enriquecer_incidentes(
                 incidente.categoria_owasp = categoria_owasp(
                     incidente.tipo_ataque, incidente.categoria
                 )
+                _ = list(incidente.eventos)
+                _ = list(incidente.baneos)
                 sesion.expunge(incidente)
 
             informe, origen = await generador.generar(incidente)
@@ -74,7 +106,10 @@ async def enriquecer_incidentes(
                 sesion.commit()
                 sesion.refresh(persistido)
 
-                if persistido.severidad <= 1:
+                debe_notificar = persistido.severidad >= 3 and (
+                    persistido.severidad_notificada is None or persistido.severidad_notificada < 3
+                )
+                if debe_notificar:
                     dispositivos = sesion.exec(
                         select(Dispositivo).where(col(Dispositivo.activo).is_(True))
                     ).all()
@@ -83,9 +118,19 @@ async def enriquecer_incidentes(
                     )
                     for dispositivo in dispositivos:
                         if dispositivo.token_fcm in invalidos:
-                            dispositivo.activo = False
-                            sesion.add(dispositivo)
+                            sesion.delete(dispositivo)
+                    persistido.severidad_notificada = persistido.severidad
+                    sesion.add(persistido)
                     sesion.commit()
+                    assert persistido.id is not None
+                    bus_eventos.publicar(
+                        AlertaIncidente(
+                            incidente_id=persistido.id,
+                            tipo_ataque=persistido.tipo_ataque,
+                            severidad=persistido.severidad,
+                            ip_origen=persistido.ip_origen,
+                        )
+                    )
         finally:
             cola.task_done()
 

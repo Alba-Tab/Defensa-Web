@@ -29,6 +29,29 @@ class PantallaDetalleIncidente extends StatelessWidget {
             padding: const EdgeInsets.only(top: 16),
             child: Text('Origen del informe: ${incidente.origenInforme}'),
           ),
+        if (incidente.eventos.isNotEmpty) ...[
+          const Divider(height: 32),
+          Text(
+            'Eventos capturados',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          ...incidente.eventos.map(
+            (evento) => ListTile(
+              contentPadding: EdgeInsets.zero,
+              title: Text(
+                '${evento.metodo ?? 'HTTP'} ${evento.url ?? 'sin URL'}',
+              ),
+              subtitle: Text(
+                [
+                  if (evento.parametros != null)
+                    'Parámetros: ${evento.parametros}',
+                  if (evento.cuerpoFragmento != null)
+                    'Cuerpo: ${evento.cuerpoFragmento}',
+                ].join('\n'),
+              ),
+            ),
+          ),
+        ],
       ],
     ),
   );
