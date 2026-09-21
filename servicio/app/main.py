@@ -26,7 +26,7 @@ from app.componentes.estado_componentes import (
 )
 from app.componentes.eventos_tiempo_real import BusEventos
 from app.componentes.fuente_eventos import EveSource, FakeSource, FuenteEventos
-from app.componentes.informes import GeneradorInformes, GeneradorPlantilla
+from app.componentes.informes import GeneradorInformes, GeneradorOllama, GeneradorPlantilla
 from app.componentes.notificador import Notificador, NotificadorFirebase, NotificadorNulo
 from app.componentes.politicas import MotorPoliticas
 from app.config import Ajustes, obtener_ajustes
@@ -72,7 +72,7 @@ def crear_aplicacion(ajustes: Ajustes | None = None) -> FastAPI:
     else:
         clasificador = ClasificadorNulo()
 
-    generador: GeneradorInformes = GeneradorPlantilla()
+    generador = crear_generador_informes(configuracion)
 
     notificador: Notificador = (
         NotificadorFirebase(configuracion.fcm_credenciales)
@@ -113,6 +113,7 @@ def crear_aplicacion(ajustes: Ajustes | None = None) -> FastAPI:
         app.state.monitor_suricata = monitor_suricata
         app.state.actuador = actuador
         app.state.clasificador = clasificador
+        app.state.generador = generador
         app.state.notificador = notificador
         app.state.procesador = procesador
         app.state.repositorio = repositorio
@@ -190,6 +191,16 @@ def crear_aplicacion(ajustes: Ajustes | None = None) -> FastAPI:
     aplicacion.include_router(router_dispositivos, prefix="/api")
     aplicacion.include_router(router_eventos, prefix="/api")
     return aplicacion
+
+
+def crear_generador_informes(configuracion: Ajustes) -> GeneradorInformes:
+    if not configuracion.ollama_url:
+        return GeneradorPlantilla()
+    return GeneradorOllama(
+        configuracion.ollama_url,
+        configuracion.ollama_modelo,
+        configuracion.timeout_ia_segundos,
+    )
 
 
 app = crear_aplicacion()

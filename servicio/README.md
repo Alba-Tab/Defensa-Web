@@ -16,6 +16,7 @@ DEFENSA_MODELO_CLASIFICADOR=servicio/modelos/clasificador.joblib make run
 ```
 
 El panel se abre en `/`. Usa `POST /api/auth/sesion` para crear una cookie de sesión web
-`HttpOnly`; los clientes móviles conservan `POST /api/auth/login` y Bearer. Ollama no es requisito
-para el panel: mientras Pb-19 esté aplazada, Pb-25 lo muestra como `no_configurado`. Para habilitar
-solo su comprobación de salud, configure `DEFENSA_OLLAMA_URL`.
+`HttpOnly`; los clientes móviles conservan `POST /api/auth/login` y Bearer. Ollama es opcional:
+si `DEFENSA_OLLAMA_URL` está configurada, redacta los informes con
+`DEFENSA_OLLAMA_MODELO`; si no responde, excede el tiempo límite o devuelve una salida inválida,
+el servicio usa automáticamente la plantilla local.

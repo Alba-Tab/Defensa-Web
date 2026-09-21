@@ -33,6 +33,7 @@ class Ajustes(BaseSettings):
     nginx_servicio: str = "nginx"
     fail2ban_servicio: str = "fail2ban"
     ollama_url: str | None = None
+    ollama_modelo: str = Field(default="llama3.2:1b", min_length=1)
     jwt_secret: SecretStr | None = None
     token_minutos: int = Field(default=480, ge=5, le=1440)
     login_max_intentos: int = Field(default=5, ge=1, le=100)
