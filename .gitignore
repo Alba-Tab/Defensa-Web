@@ -30,7 +30,11 @@ secrets/
 *.csr
 firebase-sa.json
 movil/android/app/google-services.json
-movil/android/app/google-services.json
+infra/systemd/defensa.env
+
+# Vagrant
+.vagrant/
+
 # Editors and operating systems
 .DS_Store
 .idea/

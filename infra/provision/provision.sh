@@ -41,11 +41,16 @@ fi
 setfacl -R -m u:defensa:rX /var/log/suricata
 setfacl -d -m u:defensa:rX /var/log/suricata
 install -m 0440 "${REPO_DIR}/infra/sudoers/defensa" /etc/sudoers.d/defensa
+visudo -cf /etc/sudoers.d/defensa
 
 install -m 0644 "${REPO_DIR}/infra/systemd/defensa.service" /etc/systemd/system/defensa.service
 if [[ ! -f /etc/defensa/defensa.env ]]; then
-  install -m 0640 -o root -g defensa \
-    "${REPO_DIR}/infra/systemd/defensa.env.example" /etc/defensa/defensa.env
+  if [[ -f "${REPO_DIR}/infra/systemd/defensa.env" ]]; then
+    plantilla_env="${REPO_DIR}/infra/systemd/defensa.env"
+  else
+    plantilla_env="${REPO_DIR}/infra/systemd/defensa.env.example"
+  fi
+  install -m 0640 -o root -g defensa "${plantilla_env}" /etc/defensa/defensa.env
 fi
 
 rsync -a --delete \
@@ -67,11 +72,17 @@ nginx -t
 suricata -T -c /etc/suricata/suricata.yaml -s /etc/suricata/rules/local.rules
 
 systemctl daemon-reload
-systemctl enable --now docker nginx
-systemctl enable --now nftables
-systemctl enable --now fail2ban
-systemctl enable --now suricata
-systemctl enable --now defensa
-docker compose -f "${REPO_DIR}/infra/compose/app-protegida.yaml" up -d
+systemctl enable docker nginx nftables fail2ban suricata defensa
+
+# Las configuraciones y el código pueden cambiar entre aprovisionamientos. Se
+# reinician explícitamente las unidades; `enable --now` no recarga una unidad
+# que ya estaba activa. nftables va primero y solo reemplaza su tabla propia.
+systemctl restart nftables
+systemctl restart docker
+systemctl restart fail2ban
+systemctl restart suricata
+docker compose -f "${REPO_DIR}/infra/compose/app-protegida.yaml" up -d --wait --wait-timeout 180
+systemctl restart nginx
+systemctl restart defensa
 
 echo "Aprovisionamiento terminado. Ejecuta: sudo ${REPO_DIR}/infra/verificar.sh"

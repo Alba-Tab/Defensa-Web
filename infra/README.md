@@ -11,6 +11,13 @@ vagrant ssh
 sudo /vagrant/infra/verificar.sh
 ```
 
+Después de modificar archivos de `infra/` o el servicio, reaplica el
+aprovisionamiento antes de verificar:
+
+```bash
+vagrant up --provision
+```
+
 Si Vagrant no está disponible, copia el repositorio a Ubuntu 24.04 y ejecuta:
 
 ```bash

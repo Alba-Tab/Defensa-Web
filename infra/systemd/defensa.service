@@ -13,7 +13,6 @@ ExecStartPre=/opt/defensa/venv/bin/alembic -c alembic.ini upgrade head
 ExecStart=/opt/defensa/venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000
 Restart=on-failure
 RestartSec=3
-NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=strict
 ReadWritePaths=/opt/defensa /var/log/defensa

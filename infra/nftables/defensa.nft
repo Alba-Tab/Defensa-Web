@@ -1,5 +1,7 @@
 #!/usr/sbin/nft -f
-flush ruleset
+# Reemplaza solo las reglas que pertenecen a la plataforma. Un `flush ruleset`
+# global también elimina las cadenas administradas por Docker y Fail2ban.
+destroy table inet defensa
 
 table inet defensa {
     chain gestion {
