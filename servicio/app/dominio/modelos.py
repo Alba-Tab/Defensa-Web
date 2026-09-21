@@ -1,4 +1,5 @@
 from datetime import UTC, datetime
+from typing import ClassVar
 
 from sqlalchemy import Index, text
 from sqlmodel import Field, Relationship, SQLModel
@@ -77,11 +78,12 @@ class Baneo(SQLModel, table=True):
 
 
 class ListaBlanca(SQLModel, table=True):
-    __tablename__ = "lista_blanca"
+    __tablename__: ClassVar[str] = "lista_blanca"
 
     id: int | None = Field(default=None, primary_key=True)
     ip_o_red: str = Field(unique=True)
     descripcion: str | None = None
+    predeterminada: bool = False
 
 
 class Dispositivo(SQLModel, table=True):

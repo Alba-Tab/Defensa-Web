@@ -112,3 +112,37 @@ class BaneoSalida(BaseModel):
     estado: str
     nivel_reincidencia: int
     incidente_id: int
+
+
+class ListaBlancaEntrada(BaseModel):
+    """Datos necesarios para agregar una entrada a la lista blanca (Pb-18)."""
+
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+    ip_o_red: str = Field(min_length=1, max_length=50)
+    descripcion: str | None = Field(default=None, max_length=300)
+
+    @field_validator("ip_o_red")
+    @classmethod
+    def validar_cidr(cls, valor: str) -> str:
+        from ipaddress import ip_network
+
+        try:
+            red = ip_network(valor, strict=False)
+        except ValueError as error:
+            raise ValueError(
+                f"'{valor}' no es una dirección IP ni una red CIDR válida"
+            ) from error
+        return str(red)
+
+
+class ListaBlancaSalida(BaseModel):
+    """Representación de una entrada de la lista blanca en la respuesta (Pb-18)."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    ip_o_red: str
+    descripcion: str | None
+    predeterminada: bool
+

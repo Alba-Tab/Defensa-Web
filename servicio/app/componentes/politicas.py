@@ -1,10 +1,18 @@
+"""Motor de políticas de bloqueo.
+
+Pb-18: la lista blanca se lee de la tabla ``lista_blanca`` en cada evaluación,
+en lugar de usar la tupla estática de la configuración.  Si la tabla está vacía
+se usa la lista de respaldo del fichero de configuración para preservar la
+protección del loopback y la red de administración.
+"""
+
 from datetime import datetime, timedelta
 from ipaddress import ip_address, ip_network
 
 from sqlmodel import Session, col, select
 
 from app.componentes.actuador import ActuadorBloqueo
-from app.dominio.modelos import Auditoria, Baneo, Evento, Incidente
+from app.dominio.modelos import Auditoria, Baneo, Evento, Incidente, ListaBlanca
 
 
 class MotorPoliticas:
@@ -21,11 +29,25 @@ class MotorPoliticas:
         self._umbral = umbral_eventos
         self._ventana = timedelta(seconds=ventana_segundos)
         self._duracion = timedelta(seconds=duracion_segundos)
-        self._redes_permitidas = tuple(ip_network(red, strict=False) for red in lista_blanca)
+        # Redes de respaldo: se usan solo si la tabla lista_blanca está vacía
+        self._redes_respaldo = tuple(ip_network(red, strict=False) for red in lista_blanca)
+
+    def _ip_en_lista_blanca(self, origen: str, sesion: Session) -> bool:
+        """Comprueba si la IP está en la lista blanca leyendo la BD (Pb-18).
+
+        Si no hay ninguna entrada en la tabla se usa la lista de respaldo
+        definida en la configuración para no perder la protección del loopback.
+        """
+        entradas = sesion.exec(select(ListaBlanca)).all()
+        if entradas:
+            redes = [ip_network(e.ip_o_red, strict=False) for e in entradas]
+        else:
+            redes = list(self._redes_respaldo)
+        ip = ip_address(origen)
+        return any(ip in red for red in redes)
 
     async def evaluar(self, incidente: Incidente, ahora: datetime, sesion: Session) -> Baneo | None:
-        origen = ip_address(incidente.ip_origen)
-        if any(origen in red for red in self._redes_permitidas):
+        if self._ip_en_lista_blanca(incidente.ip_origen, sesion):
             return None
 
         existente = sesion.exec(
