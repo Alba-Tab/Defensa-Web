@@ -80,7 +80,10 @@ async def enriquecer_incidentes(
     motor: Engine,
     generador: GeneradorInformes,
     notificador: Notificador,
+    max_reintentos: int = 3,
+    espera_reintento_segundos: float = 0.25,
 ) -> None:
+    intentos: dict[int, int] = {}
     while True:
         incidente_id = await cola.get()
         try:
@@ -95,14 +98,15 @@ async def enriquecer_incidentes(
                 _ = list(incidente.baneos)
                 sesion.expunge(incidente)
 
-            informe, origen = await generador.generar(incidente)
+            resultado_informe = await generador.generar(incidente)
             with Session(motor) as sesion:
                 persistido = sesion.get(Incidente, incidente_id)
                 if persistido is None:
                     continue
                 persistido.categoria_owasp = incidente.categoria_owasp
-                persistido.informe = informe
-                persistido.origen_informe = origen
+                persistido.informe = resultado_informe.contenido
+                persistido.origen_informe = resultado_informe.origen
+                persistido.modelo_informe = resultado_informe.modelo
                 sesion.add(persistido)
                 sesion.commit()
                 sesion.refresh(persistido)
@@ -123,6 +127,29 @@ async def enriquecer_incidentes(
                     persistido.severidad_notificada = persistido.severidad
                     sesion.add(persistido)
                     sesion.commit()
+            intentos.pop(incidente_id, None)
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            intento = intentos.get(incidente_id, 0) + 1
+            if intento < max_reintentos:
+                intentos[incidente_id] = intento
+                logger.warning(
+                    "No se pudo enriquecer el incidente %s; reintento %s de %s",
+                    incidente_id,
+                    intento,
+                    max_reintentos - 1,
+                    exc_info=True,
+                )
+                await asyncio.sleep(espera_reintento_segundos * intento)
+                await cola.put(incidente_id)
+            else:
+                intentos.pop(incidente_id, None)
+                logger.exception(
+                    "No se pudo enriquecer el incidente %s tras %s intentos",
+                    incidente_id,
+                    max_reintentos,
+                )
         finally:
             cola.task_done()
 

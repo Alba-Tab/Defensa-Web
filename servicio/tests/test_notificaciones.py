@@ -6,7 +6,7 @@ import pytest
 from sqlalchemy.pool import StaticPool
 from sqlmodel import Session, SQLModel, create_engine, select
 
-from app.componentes.informes import GeneradorPlantilla
+from app.componentes.informes import GeneradorPlantilla, InformeGenerado
 from app.dominio.modelos import Dispositivo, Evento, Incidente
 from app.integracion import enriquecer_incidentes
 
@@ -20,6 +20,30 @@ class NotificadorEspia:
         assert incidente.id is not None
         self.llamadas.append((incidente.id, tokens))
         return self._invalidos
+
+
+class GeneradorEspia:
+    async def generar(self, incidente: Incidente) -> InformeGenerado:
+        return InformeGenerado(
+            contenido=f"Informe generado para {incidente.ip_origen}",
+            origen="generado_ia",
+            modelo="llama3.2:1b",
+        )
+
+
+class GeneradorInestable:
+    def __init__(self) -> None:
+        self.intentos = 0
+
+    async def generar(self, incidente: Incidente) -> InformeGenerado:
+        self.intentos += 1
+        if self.intentos == 1:
+            raise RuntimeError("fallo transitorio")
+        return InformeGenerado(
+            contenido=f"Informe recuperado para {incidente.ip_origen}",
+            origen="generado_ia",
+            modelo="llama3.2:1b",
+        )
 
 
 def preparar_incidente(sesion: Session, severidad: int, ip: str) -> Incidente:
@@ -135,3 +159,77 @@ async def test_incidente_medio_no_notifica_hasta_escalar_a_alto() -> None:
             await tarea
 
     assert len(notificador.llamadas) == 1
+
+
+@pytest.mark.asyncio
+async def test_enriquecimiento_persiste_origen_y_modelo_del_informe() -> None:
+    motor = create_engine(
+        "sqlite://",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    SQLModel.metadata.create_all(motor)
+    with Session(motor) as sesion:
+        incidente = preparar_incidente(sesion, 2, "192.0.2.72")
+        sesion.commit()
+        incidente_id = incidente.id
+    assert incidente_id is not None
+
+    cola: asyncio.Queue[int] = asyncio.Queue()
+    tarea = asyncio.create_task(
+        enriquecer_incidentes(cola, motor, GeneradorEspia(), NotificadorEspia())
+    )
+    try:
+        await cola.put(incidente_id)
+        await cola.join()
+    finally:
+        tarea.cancel()
+        with suppress(asyncio.CancelledError):
+            await tarea
+
+    with Session(motor) as sesion:
+        persistido = sesion.get(Incidente, incidente_id)
+    assert persistido is not None
+    assert persistido.informe == "Informe generado para 192.0.2.72"
+    assert persistido.origen_informe == "generado_ia"
+    assert persistido.modelo_informe == "llama3.2:1b"
+
+
+@pytest.mark.asyncio
+async def test_enriquecimiento_reintenta_un_fallo_transitorio_sin_morir() -> None:
+    motor = create_engine(
+        "sqlite://",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    SQLModel.metadata.create_all(motor)
+    with Session(motor) as sesion:
+        incidente = preparar_incidente(sesion, 2, "192.0.2.73")
+        sesion.commit()
+        incidente_id = incidente.id
+    assert incidente_id is not None
+
+    generador = GeneradorInestable()
+    cola: asyncio.Queue[int] = asyncio.Queue()
+    tarea = asyncio.create_task(
+        enriquecer_incidentes(
+            cola,
+            motor,
+            generador,
+            NotificadorEspia(),
+            espera_reintento_segundos=0,
+        )
+    )
+    try:
+        await cola.put(incidente_id)
+        await cola.join()
+    finally:
+        tarea.cancel()
+        with suppress(asyncio.CancelledError):
+            await tarea
+
+    with Session(motor) as sesion:
+        persistido = sesion.get(Incidente, incidente_id)
+    assert generador.intentos == 2
+    assert persistido is not None
+    assert persistido.informe == "Informe recuperado para 192.0.2.73"

@@ -60,21 +60,21 @@ Orden lógico de funcionamiento: cada HU depende solo de las anteriores de esta 
 | 7 | Pb-16 | Bloqueo progresivo | Media | M3 | Pb-6 | **5** | Soldado Capuma Brandon | Pendiente |
 | 8 | Pb-17 | Bloqueo por fuerza bruta | Media | M3 | Pb-1, Pb-6 | **8** | Soldado Capuma Brandon | Pendiente |
 | 9 | Pb-18 | Gestión de lista blanca | Media | M3 | Pb-6 | **5** | Sandoval Martinez Erick | Pendiente |
-| 10 | Pb-19 | Informe con IA local | Media | M5 | Pb-7; C-32; spike 5 (C-43) | **8** | Vargas Figueroa Jairo Moises | Aplazada por decisión del equipo |
+| 10 | Pb-19 | Informe con IA local | Media | M5 | Pb-7; C-32; spike 5 (C-43) | **8** | Vargas Figueroa Jairo Moises | Terminada |
 | 11 | Pb-21 | Historial consultable | Media | M4 | Pb-5 | **3** | Aldana Claure Brayan | Terminada |
 | 12 | Pb-22 | Detalle de incidente (panel) | Media | M6 | Pb-5, Pb-7, Pb-21; C-33 | **8** | Garcia Taboada Brayan Albaro | Terminada |
 | 13 | Pb-25 | Estado de componentes (panel) | Media | M6 | Pb-4; C-33 | **5** | Garcia Taboada Brayan Albaro | Implementada; verificación VM pendiente |
 | 14 | Pb-24 | Alertas en tiempo real (panel) | Media | M6 | Pb-5, Pb-22 | **3** | Vargas Figueroa Jairo Moises | Terminada |
 | 15 | Pb-26 | Tablero de métricas (panel) | Media | M6 | Pb-5, Pb-6, Pb-20 | **5** | Garcia Taboada Brayan Albaro | Terminada |
 | 16 | Pb-23 | Liberar bloqueo desde el panel | Media | M6 | Pb-6, Pb-22 | **3** | Garcia Taboada Brayan Albaro | Terminada |
-| | | **Total de PHU** | | | | **77** | | 30 terminados; 5 implementados pendientes de VM |
+| | | **Total de PHU** | | | | **77** | | 38 terminados; 5 implementados pendientes de VM |
 
 ### 2.1 Reparto por desarrollador
 
 | Desarrollador | HU asignadas | PHU | Pendientes | Bloque de trabajo |
 |---|---|---|---|---|
 | Garcia Taboada Brayan Albaro | Pb-22, Pb-23, Pb-25, Pb-26 | **21** | 5 (solo evidencia VM de Pb-25) | Panel web: sesión, detalle de incidente, estado, tablero y liberación |
-| Vargas Figueroa Jairo Moises | Pb-15, Pb-29, Pb-19, Pb-24 | **19** | 8 aplazados (Pb-19) | Borde de entrada y alertas terminados; IA local aplazada |
+| Vargas Figueroa Jairo Moises | Pb-15, Pb-29, Pb-19, Pb-24 | **19** | 0 | Borde de entrada, IA local y alertas terminados |
 | Soldado Capuma Brandon | Pb-16, Pb-17 | **13** | 13 | Ciclo de vida del baneo: reincidencia y fuerza bruta |
 | Sandoval Martinez Erick | Pb-13, Pb-14, Pb-18 | **13** | 13 | Escaneo y sondeo de archivos, más la lista blanca administrable |
 | Aldana Claure Brayan | Pb-11, Pb-12, Pb-21 | **11** | 8 | Historial terminado; pendientes las firmas XSS y path traversal |
@@ -90,9 +90,9 @@ La revisión durante el desarrollo mostró que varias dependencias eran necesari
 | Pb-22 | **Pb-21** (filtros de `GET /api/incidentes`) | Aldana | Bloqueante solo para el cierre; la estructura visual pudo avanzar antes |
 | Pb-24 | Sesión web y lista de incidentes de Pb-22 | Garcia | Compartió el cimiento de autenticación, no el detalle completo |
 | Pb-23 | Sesión web | Garcia | No necesitó esperar los filtros de Pb-21 |
-| Pb-25 | Configuración opcional de Ollama | Vargas | No bloqueante: muestra `no_configurado` mientras Pb-19 esté aplazada |
+| Pb-25 | Configuración opcional de Ollama | Vargas | No bloqueante: usa `no_configurado` cuando no se define la URL y `activo` cuando responde |
 | Pb-26 | Pb-11 a Pb-14 (tipos de ataque) | Aldana, Sandoval | Blando: el gráfico funciona, pero muestra una sola categoría |
-| Pb-22 | Pb-19 (etiqueta «generado por IA») | Vargas | Blando: hasta entonces todo sale como «plantilla» |
+| Pb-22 | Pb-19 (etiqueta «generado por IA») | Vargas | Cerrada: el panel distingue `generado_ia` de `plantilla` |
 | Pb-23 | Pb-16 (nivel de reincidencia visible) | Soldado | Blando: el dato se muestra vacío hasta que exista |
 
 **Camino aplicado:** sesión web + Pb-21 → Pb-22, mientras Pb-23, Pb-25 y Pb-26 avanzaron en paralelo. Pb-24 reutilizó la sesión por cookie y el listado, pero no necesitó esperar al detalle completo.
@@ -449,7 +449,7 @@ No aplica: es una HU sin interfaz. La evidencia de la demostración es la prueba
 
 | Id. | Nombre corto de HU | Prioridad | HU (PHU) | Estado |
 |---|---|---|---|---|
-| Pb-19 | Informe con IA local | Media | **8** | Aplazada por decisión del equipo |
+| Pb-19 | Informe con IA local | Media | **8** | Terminada |
 
 | Campo | Detalle |
 |---|---|
@@ -473,6 +473,13 @@ No aplica: es una HU sin interfaz. La evidencia de la demostración es la prueba
 **Prototipo / Mockup (opcional)**
 
 No aplica: el informe se muestra en la app móvil (Pb-27) y en el panel (Pb-22); esta HU solo cambia quién lo redacta.
+
+**Resultado del desarrollo (21/09/2026).** Cuando `DEFENSA_OLLAMA_URL` está configurada, el
+servicio selecciona `GeneradorOllama`, envía únicamente hechos delimitados y truncados, valida
+las cuatro secciones y persiste `origen_informe = generado_ia` junto con el modelo. Categoría
+OWASP y acción aplicada se fijan desde los hechos para evitar alucinaciones. Ante timeout, error
+HTTP o salida inválida se usa `GeneradorPlantilla`. La cola reintenta fallos transitorios sin
+terminar el trabajador. Evidencia: `pruebas/evidencias/Pb-19.md`.
 
 | Desarrollador | Vargas Figueroa Jairo Moises |
 |---|---|
@@ -585,7 +592,7 @@ Esqueleto existente: `panel.html`, bloque `#componentes` (lista con los cuatro c
 
 **Resultado del desarrollo (20/09/2026).** `GET /api/salud` informa por separado nginx,
 Suricata, Fail2ban y Ollama. En modo simulado los servicios del host aparecen como `no_aplica` y,
-mientras Pb-19 esté aplazada, Ollama aparece como `no_configurado`. Si se define
+cuando no se configura Ollama aparece como `no_configurado`. Si se define
 `DEFENSA_OLLAMA_URL`, se comprueba `/api/tags`; una caída devuelve `inactivo` y degrada el estado
 global. El panel refresca cada 30 s y bajo demanda. Falta ejecutar el criterio 6 deteniendo
 Suricata en la VM; hasta registrar esa evidencia la HU no se considera terminada. Evidencia:
