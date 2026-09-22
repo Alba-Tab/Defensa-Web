@@ -12,14 +12,14 @@ Se implementaron **3 reglas Suricata** para detectar inyecciones XSS en solicitu
 
 Cada alerta genera un `Evento` con:
 - `sid`: 1000005, 1000006 o 1000007
-- `categoria`: "web-application-attack"
-- `severidad_firma`: 3 (alta)
+- `categoria`: `xss` (Suricata emite el `classtype` genérico `Web Application Attack`; `EveSource` lo traduce a `xss` por SID)
+- `severidad_firma`: 1 (escala de Suricata, donde 1 es la más alta)
 
-El clasificador identifica automáticamente `tipo_ataque = "xss"` con severidad 3, y el correlador agrupa incidentes por IP + categoría con ventana de 5 minutos. Las políticas bloquean IPs tras 5 eventos en 60 segundos.
+El `tipo_ataque = "xss"` del incidente lo fija la categoría de la firma, que tiene prioridad sobre una predicción contradictoria del clasificador. El correlador invierte la severidad de la firma (1 → incidente severidad 3, alta) y agrupa incidentes por IP + categoría con ventana de 5 minutos. Las políticas bloquean IPs tras 5 eventos en 60 segundos.
 
 ## Verificación
 
-- Test automático: `servicio/tests/test_suricata_reglas.py::test_suricata_detecta_xss_script_tag()`
+- Test automático: `servicio/tests/test_suricata_reglas.py::test_suricata_detecta_xss_get_y_post_sin_falso_positivo()`
 - Reglas en: `/infra/suricata/local.rules` (líneas 5-10)
 - Dashboard: Muestra incidentes con `tipo_ataque = "xss"`, severidad "Alta"
 - Prueba manual: Curl con payload `%3Cscript%3Ealert(1)%3C/script%3E` → SID 1000005 detectado en eve.json → Incidente visible en UI dentro de 2 segundos
@@ -45,14 +45,14 @@ Se implementaron **3 reglas Suricata** para detectar intentos de traversal de di
 
 Cada alerta genera un `Evento` con:
 - `sid`: 1000008, 1000009 o 1000010
-- `categoria`: "web-application-attack"
-- `severidad_firma`: 3 (alta)
+- `categoria`: `traversal` (traducida por SID en `EveSource` desde el `classtype` genérico)
+- `severidad_firma`: 1 (escala de Suricata, donde 1 es la más alta)
 
-El clasificador identifica automáticamente `tipo_ataque = "traversal"` con severidad 3. El correlador, políticas y BD funcionan como en Pb-11.
+El `tipo_ataque = "traversal"` del incidente lo fija la categoría de la firma (severidad 1 → incidente severidad 3, alta). El correlador, políticas y BD funcionan como en Pb-11.
 
 ## Verificación
 
-- Test automático: `servicio/tests/test_suricata_reglas.py::test_suricata_detecta_path_traversal()`
+- Test automático: `servicio/tests/test_suricata_reglas.py::test_suricata_detecta_traversal_y_documenta_doble_codificacion()`
 - Reglas en: `/infra/suricata/local.rules` (líneas 11-16)
 - Dashboard: Muestra incidentes con `tipo_ataque = "traversal"`, severidad "Alta"
 - Prueba manual: Curl con payload `../../../../etc/passwd` → SID 1000008 o SID 1000010 detectado en eve.json → Incidente visible en UI dentro de 2 segundos
@@ -85,8 +85,8 @@ El clasificador identifica automáticamente `tipo_ataque = "traversal"` con seve
    - Razón: Las fechas deben conservar información de timezone para BD
 
 4. **`servicio/tests/test_suricata_reglas.py`**
-   - Agregado test: `test_suricata_detecta_xss_script_tag()`
-   - Agregado test: `test_suricata_detecta_path_traversal()`
+   - Agregado test: `test_suricata_detecta_xss_get_y_post_sin_falso_positivo()`
+   - Agregado test: `test_suricata_detecta_traversal_y_documenta_doble_codificacion()`
 
 5. **`pruebas/guion.md`**
    - Agregadas secciones de prueba manual para Pb-11 y Pb-12
@@ -104,9 +104,9 @@ eve.json {alert con SID 1000005-1000010, src_ip, http.url}
     ↓
 defensa.service (procesador de eventos)
     ↓
-Correlador (agrupa por IP + categoría)
+EveSource (traduce SID → categoría "xss" o "traversal")
     ↓
-Clasificador (asigna tipo_ataque: "xss" o "traversal")
+Correlador (agrupa por IP + categoría; la firma fija tipo_ataque)
     ↓
 Políticas (evalúa umbral: 5 eventos / 60s)
     ↓
