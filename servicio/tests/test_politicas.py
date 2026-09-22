@@ -110,3 +110,59 @@ async def test_lista_blanca_alerta_pero_no_banea() -> None:
         assert baneo is None
         assert len(sesion.exec(select(Baneo)).all()) == 0
     assert actuador.intentos == 0
+
+
+@pytest.mark.asyncio
+async def test_bloqueo_progresivo_incrementa_duracion_y_severidad() -> None:
+    """Pb-16: Verificar que baneos sucesivos duran más y severidad sube a crítica en el 3ro."""
+    motor = create_engine(
+        "sqlite://",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    SQLModel.metadata.create_all(motor)
+    actuador = ActuadorFallaUnaVez()
+    politicas = MotorPoliticas(
+        actuador,
+        umbral_eventos=5,
+        ventana_segundos=60,
+        duracion_segundos=600,
+        lista_blanca=("127.0.0.0/8",),
+    )
+    correlador = Correlador(300)
+    inicio = datetime(2026, 9, 19, 12, 0, 0)
+
+    baneos = []
+
+    for ataque_num in range(4):
+        with Session(motor) as sesion:
+            for indice in range(5):
+                incidente, _, _ = correlador.registrar(
+                    evento(inicio + timedelta(seconds=ataque_num*100 + indice), ataque_num*10 + indice), sesion
+                )
+            sesion.commit()
+
+        with Session(motor) as sesion:
+            incidente, _, _ = correlador.registrar(
+                evento(inicio + timedelta(seconds=ataque_num*100 + 5), ataque_num*10 + 5), sesion
+            )
+            baneo = await politicas.evaluar(incidente, inicio + timedelta(seconds=ataque_num*100 + 5), sesion)
+            sesion.commit()
+            if baneo:
+                baneos.append(baneo)
+
+    assert len(baneos) == 4, "Debería haber 4 baneos"
+
+    duraciones_esperadas = [
+        timedelta(minutes=10),
+        timedelta(minutes=20),
+        timedelta(minutes=40),
+        timedelta(hours=24),
+    ]
+
+    for idx, (baneo, duracion_esperada) in enumerate(zip(baneos, duraciones_esperadas)):
+        duracion_real = baneo.expira - baneo.inicio
+        assert duracion_real == duracion_esperada, f"Baneo {idx+1}: esperaba {duracion_esperada}, obtuvo {duracion_real}"
+        assert baneo.nivel_reincidencia == idx + 1, f"Baneo {idx+1}: nivel debería ser {idx+1}"
+
+    assert baneos[2].incidente.severidad == 4, "Tercer baneo debería marcar incidente como CRÍTICA (severidad 4)"

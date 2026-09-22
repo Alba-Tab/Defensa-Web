@@ -72,7 +72,14 @@ class MotorPoliticas:
         if len(eventos) < self._umbral:
             return None
 
-        expira = ahora + self._duracion
+        duraciones_progresivas = {
+            0: timedelta(minutes=10),
+            1: timedelta(minutes=20),
+            2: timedelta(minutes=40),
+        }
+        nivel_actual = existente.nivel_reincidencia if existente else 0
+        duracion = duraciones_progresivas.get(nivel_actual, timedelta(hours=24))
+        expira = ahora + duracion
         assert incidente.id is not None
         baneo = existente or Baneo(
             ip=incidente.ip_origen,
@@ -81,6 +88,12 @@ class MotorPoliticas:
             estado="pendiente",
         )
         baneo.expira = expira
+        if existente is None:
+            baneo.nivel_reincidencia = 1
+        else:
+            baneo.nivel_reincidencia = existente.nivel_reincidencia + 1
+        if baneo.nivel_reincidencia >= 3:
+            incidente.severidad = 4
         sesion.add(baneo)
         sesion.flush()
         try:
