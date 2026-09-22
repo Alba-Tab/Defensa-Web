@@ -22,7 +22,11 @@ class ProcesadorEventos:
             evento.confianza_ia = clasificacion.confianza
             sesion.add(evento)
             incidente.confianza_clasificador = clasificacion.confianza
-            if clasificacion.tipo != "indeterminado":
+            if entrada.categoria in {"escaneo", "sondeo_archivos"}:
+                # Una firma local específica prevalece sobre la predicción de
+                # la IA, que todavía no conoce la clase sondeo_archivos.
+                incidente.tipo_ataque = entrada.categoria
+            elif clasificacion.tipo != "indeterminado":
                 incidente.tipo_ataque = clasificacion.tipo
             if clasificacion.severidad is not None:
                 incidente.severidad = max(incidente.severidad, clasificacion.severidad)

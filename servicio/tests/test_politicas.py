@@ -7,7 +7,7 @@ from sqlmodel import Session, SQLModel, create_engine, select
 from app.componentes.correlador import Correlador
 from app.componentes.politicas import MotorPoliticas
 from app.dominio.esquemas import EventoEntrada
-from app.dominio.modelos import Auditoria, Baneo
+from app.dominio.modelos import Auditoria, Baneo, ListaBlanca
 
 
 class ActuadorFallaUnaVez:
@@ -109,4 +109,33 @@ async def test_lista_blanca_alerta_pero_no_banea() -> None:
 
         assert baneo is None
         assert len(sesion.exec(select(Baneo)).all()) == 0
+    assert actuador.intentos == 0
+
+
+@pytest.mark.asyncio
+async def test_redes_configuradas_siguen_protegidas_con_entradas_en_bd() -> None:
+    motor = create_engine(
+        "sqlite://",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    SQLModel.metadata.create_all(motor)
+    actuador = ActuadorFallaUnaVez()
+    politicas = MotorPoliticas(
+        actuador,
+        umbral_eventos=1,
+        ventana_segundos=60,
+        duracion_segundos=600,
+        lista_blanca=("127.0.0.0/8",),
+    )
+    entrada = evento(datetime(2026, 9, 19, 12, 0, 0), 1)
+    entrada.ip_origen = "127.0.0.1"
+
+    with Session(motor) as sesion:
+        sesion.add(ListaBlanca(ip_o_red="10.0.0.0/8"))
+        sesion.commit()
+        incidente, _, _ = Correlador(300).registrar(entrada, sesion)
+        baneo = await politicas.evaluar(incidente, entrada.fecha_utc, sesion)
+
+    assert baneo is None
     assert actuador.intentos == 0
