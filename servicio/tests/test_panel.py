@@ -27,6 +27,9 @@ def test_panel_exige_sesion_y_carga_las_historias_web(cliente: TestClient) -> No
         "grafico-tipos",
         "lista-bloqueos",
         "detalle-incidente",
+        "formulario-lista-blanca",
+        "lista-lista-blanca",
+        "confirmar-baja-lista-blanca",
     ):
         assert f'id="{elemento}"' in respuesta.text
     for recurso in (

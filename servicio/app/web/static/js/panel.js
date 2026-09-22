@@ -1,6 +1,7 @@
 const estadoPanel = {
   incidentes: [],
   ipPendiente: null,
+  listaBlancaPendiente: null,
   graficos: {},
   fuenteEventos: null,
 };
@@ -20,7 +21,8 @@ async function api(ruta, opciones = {}) {
   }
   if (!respuesta.ok) {
     const cuerpo = await respuesta.json().catch(() => ({}));
-    throw new Error(cuerpo.detail || `Error ${respuesta.status}`);
+    const detalle = Array.isArray(cuerpo.detail) ? cuerpo.detail[0]?.msg : cuerpo.detail;
+    throw new Error(detalle?.replace(/^Value error,\s*/, "") || `Error ${respuesta.status}`);
   }
   if (respuesta.status === 204) return null;
   return respuesta.json();
@@ -315,6 +317,92 @@ function mostrarAlerta(alerta) {
   window.setTimeout(() => aviso.remove(), 6500);
 }
 
+function insigniaListaBlanca(predeterminada) {
+  const elemento = document.createElement("span");
+  elemento.className = `insignia ${predeterminada ? "insignia-estado-cerrado" : "insignia-estado-abierto"}`;
+  elemento.textContent = predeterminada ? "Predeterminada" : "Manual";
+  return elemento;
+}
+
+async function cargarListaBlanca() {
+  const cuerpo = document.querySelector("#lista-lista-blanca");
+  try {
+    const entradas = await api("/api/lista-blanca");
+    cuerpo.replaceChildren();
+    if (!entradas.length) {
+      mostrarError(cuerpo, 4, "No hay entradas en la lista blanca.");
+      return;
+    }
+    for (const entrada of entradas) {
+      const fila = document.createElement("tr");
+      fila.append(celda(entrada.ip_o_red), celda(entrada.descripcion || "—"), celda(insigniaListaBlanca(entrada.predeterminada)));
+      if (entrada.predeterminada) {
+        fila.append(celda("—"));
+      } else {
+        const boton = document.createElement("button");
+        boton.className = "boton-peligro boton-compacto";
+        boton.type = "button";
+        boton.textContent = "Quitar";
+        boton.addEventListener("click", () => pedirBajaListaBlanca(entrada));
+        fila.append(celda(boton));
+      }
+      cuerpo.append(fila);
+    }
+  } catch (error) {
+    mostrarError(cuerpo, 4, error.message);
+  }
+}
+
+function pedirBajaListaBlanca(entrada) {
+  estadoPanel.listaBlancaPendiente = entrada;
+  texto(document.querySelector("#entrada-a-quitar"), entrada.ip_o_red);
+  document.querySelector("#confirmar-baja-lista-blanca").showModal();
+}
+
+async function quitarDeListaBlanca() {
+  if (!estadoPanel.listaBlancaPendiente) return;
+  const boton = document.querySelector("#confirmar-quitar-lista-blanca");
+  boton.disabled = true;
+  try {
+    await api(`/api/lista-blanca/${estadoPanel.listaBlancaPendiente.id}`, { method: "DELETE" });
+    document.querySelector("#confirmar-baja-lista-blanca").close();
+    estadoPanel.listaBlancaPendiente = null;
+    await cargarListaBlanca();
+  } catch (error) {
+    window.alert(error.message);
+  } finally {
+    boton.disabled = false;
+  }
+}
+
+async function agregarAListaBlanca(evento) {
+  evento.preventDefault();
+  const formulario = evento.target;
+  const mensajeError = document.querySelector("#error-lista-blanca");
+  mensajeError.hidden = true;
+  const datos = new FormData(formulario);
+  const cuerpo = {
+    ip_o_red: String(datos.get("ip_o_red") || "").trim(),
+    descripcion: String(datos.get("descripcion") || "").trim() || null,
+  };
+  const boton = formulario.querySelector("button[type='submit']");
+  boton.disabled = true;
+  try {
+    await api("/api/lista-blanca", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(cuerpo),
+    });
+    formulario.reset();
+    await cargarListaBlanca();
+  } catch (error) {
+    mensajeError.textContent = error.message;
+    mensajeError.hidden = false;
+  } finally {
+    boton.disabled = false;
+  }
+}
+
 function conectarTiempoReal() {
   estadoPanel.fuenteEventos?.close();
   const ultimo = Math.max(0, ...estadoPanel.incidentes.map((incidente) => incidente.id));
@@ -342,16 +430,20 @@ document.addEventListener("DOMContentLoaded", async () => {
   document.querySelector("#limpiar-filtros")?.addEventListener("click", () => { document.querySelector("#filtros-incidentes").reset(); cargarIncidentes(); });
   document.querySelector("#actualizar-salud")?.addEventListener("click", cargarSalud);
   document.querySelector("#actualizar-bloqueos")?.addEventListener("click", cargarBloqueos);
+  document.querySelector("#actualizar-lista-blanca")?.addEventListener("click", cargarListaBlanca);
+  document.querySelector("#formulario-lista-blanca")?.addEventListener("submit", agregarAListaBlanca);
   document.querySelector("[data-cerrar-dialogo]")?.addEventListener("click", () => document.querySelector("#detalle-incidente").close());
   document.querySelector("[data-cancelar-liberacion]")?.addEventListener("click", () => document.querySelector("#confirmar-liberacion").close());
   document.querySelector("#confirmar-liberar")?.addEventListener("click", liberarIp);
+  document.querySelector("[data-cancelar-baja-lista-blanca]")?.addEventListener("click", () => document.querySelector("#confirmar-baja-lista-blanca").close());
+  document.querySelector("#confirmar-quitar-lista-blanca")?.addEventListener("click", quitarDeListaBlanca);
   document.body.addEventListener("htmx:afterRequest", (evento) => {
     if (evento.detail.elt?.id === "cerrar-sesion" && evento.detail.successful) {
       window.location.replace("/login");
     }
   });
 
-  await Promise.all([cargarIncidentes(), cargarSalud(), cargarMetricas(), cargarBloqueos()]);
+  await Promise.all([cargarIncidentes(), cargarSalud(), cargarMetricas(), cargarBloqueos(), cargarListaBlanca()]);
   conectarTiempoReal();
   window.setInterval(() => Promise.all([cargarSalud(), cargarMetricas(), cargarBloqueos()]), 30000);
 });

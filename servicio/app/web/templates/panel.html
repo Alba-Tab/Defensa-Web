@@ -104,6 +104,27 @@
     </div>
   </section>
 
+  <section class="panel" id="lista-blanca">
+    <div class="panel-cabecera">
+      <div><p class="sobrelinea">Excepciones</p><h2>Lista blanca</h2></div>
+      <button id="actualizar-lista-blanca" class="boton-secundario" type="button">Actualizar</button>
+    </div>
+    <form id="formulario-lista-blanca" class="formulario-lista-blanca">
+      <label>IP o red (CIDR) <input name="ip_o_red" placeholder="203.0.113.0/24" required></label>
+      <label>Descripción <input name="descripcion" placeholder="Motivo de la excepción (opcional)"></label>
+      <div class="acciones-filtro">
+        <button class="boton-primario" type="submit">Agregar</button>
+      </div>
+    </form>
+    <p id="error-lista-blanca" class="mensaje-error" hidden></p>
+    <div class="tabla-contenedor">
+      <table>
+        <thead><tr><th>IP o red</th><th>Descripción</th><th>Tipo</th><th></th></tr></thead>
+        <tbody id="lista-lista-blanca"><tr><td colspan="4" class="estado-tabla">Cargando lista blanca…</td></tr></tbody>
+      </table>
+    </div>
+  </section>
+
   <dialog id="detalle-incidente" class="dialogo dialogo-detalle">
     <div class="dialogo-cabecera">
       <div><p class="sobrelinea">Análisis</p><h2 id="detalle-titulo">Detalle de incidente</h2></div>
@@ -118,6 +139,15 @@
     <div class="acciones-dialogo">
       <button class="boton-secundario" data-cancelar-liberacion type="button">Cancelar</button>
       <button id="confirmar-liberar" class="boton-peligro" type="button">Sí, liberar IP</button>
+    </div>
+  </dialog>
+
+  <dialog id="confirmar-baja-lista-blanca" class="dialogo dialogo-confirmacion">
+    <p class="sobrelinea">Confirmación requerida</p><h2>Quitar de la lista blanca</h2>
+    <p>¿Deseas quitar <strong id="entrada-a-quitar"></strong> de la lista blanca? La acción quedará auditada.</p>
+    <div class="acciones-dialogo">
+      <button class="boton-secundario" data-cancelar-baja-lista-blanca type="button">Cancelar</button>
+      <button id="confirmar-quitar-lista-blanca" class="boton-peligro" type="button">Sí, quitar</button>
     </div>
   </dialog>
 {% endblock %}
