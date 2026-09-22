@@ -7,6 +7,7 @@ from sqlmodel import Session, col, select
 
 from app.componentes.conciliador import Conciliador
 from app.componentes.eventos_tiempo_real import AlertaIncidente, BusEventos
+from app.componentes.detector_fuerza_bruta import DetectorFuerzaBruta
 from app.componentes.fuente_eventos import FuenteEventos
 from app.componentes.informes import GeneradorInformes
 from app.componentes.notificador import Notificador
@@ -62,6 +63,30 @@ async def mantener_estado(
         cerrados = repositorio.cerrar_incidentes_inactivos(ahora_utc())
         for incidente_id in cerrados:
             await cola_enriquecimiento.put(incidente_id)
+
+
+async def procesar_fuerza_bruta(
+    detector: DetectorFuerzaBruta,
+    procesador: ProcesadorEventos,
+    motor: Engine,
+    cola_enriquecimiento: asyncio.Queue[int],
+    bus_eventos: BusEventos,
+    intervalo_segundos: float = 30,
+) -> None:
+    """Detecta intentos de fuerza bruta periódicamente (Pb-17)."""
+    while True:
+        await asyncio.sleep(intervalo_segundos)
+        try:
+            eventos = await detector.procesar()
+            for evento in eventos:
+                with Session(motor) as sesion:
+                    resultado = await procesador.procesar(evento, sesion)
+                publicar_incidente_nuevo(resultado, bus_eventos)
+                await cola_enriquecimiento.put(resultado.incidente_id)
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            logger.exception("Error procesando detección de fuerza bruta")
 
 
 def categoria_owasp(tipo: str, categoria_firma: str) -> str:

@@ -25,6 +25,9 @@ class Ajustes(BaseSettings):
     intervalo_mantenimiento_segundos: float = Field(default=5, gt=0, le=300)
     lista_blanca: Annotated[tuple[str, ...], NoDecode] = ("127.0.0.0/8", "::1/128")
     eve_json: Path = Path("/var/log/suricata/eve.json")
+    nginx_access_log: Path = Path("/var/log/nginx/access.log")
+    brute_force_umbral: int = Field(default=5, ge=1, le=100)
+    brute_force_ventana_segundos: int = Field(default=600, ge=1)
     systemctl_binario: Path = Path("/usr/bin/systemctl")
     suricata_servicio: str = "suricata"
     salud_timeout_segundos: float = Field(default=2, gt=0, le=10)

@@ -20,6 +20,7 @@ from app.componentes.actuador import ActuadorBloqueo, DryRunActuator, Fail2banAc
 from app.componentes.clasificador import Clasificador, ClasificadorJoblib, ClasificadorNulo
 from app.componentes.conciliador import Conciliador
 from app.componentes.correlador import Correlador
+from app.componentes.detector_fuerza_bruta import DetectorFuerzaBruta
 from app.componentes.estado_componentes import (
     MonitorSuricata,
     MonitorSuricataSimulado,
@@ -38,6 +39,7 @@ from app.integracion import (
     consumir_eventos,
     enriquecer_incidentes,
     mantener_estado,
+    procesar_fuerza_bruta,
 )
 from app.repositorio import Repositorio
 from app.seguridad import LimitadorLogin, ServicioContrasenas, ServicioTokens
@@ -104,6 +106,11 @@ def crear_aplicacion(ajustes: Ajustes | None = None) -> FastAPI:
         ventana_segundos=configuracion.login_ventana_segundos,
         bloqueo_segundos=configuracion.login_bloqueo_segundos,
     )
+    detector_fuerza_bruta = DetectorFuerzaBruta(
+        configuracion.nginx_access_log,
+        configuracion.brute_force_umbral,
+        configuracion.brute_force_ventana_segundos,
+    )
     cola_enriquecimiento: asyncio.Queue[int] = asyncio.Queue(maxsize=1000)
 
     @asynccontextmanager
@@ -124,6 +131,7 @@ def crear_aplicacion(ajustes: Ajustes | None = None) -> FastAPI:
         app.state.limitador_login = limitador_login
         app.state.cola_enriquecimiento = cola_enriquecimiento
         app.state.bus_eventos = bus_eventos
+        app.state.detector_fuerza_bruta = detector_fuerza_bruta
 
         if configuracion.admin_password:
             with Session(motor) as sesion:
@@ -173,9 +181,24 @@ def crear_aplicacion(ajustes: Ajustes | None = None) -> FastAPI:
             ),
             name="mantener-incidentes",
         )
+        tarea_fuerza_bruta = (
+            asyncio.create_task(
+                procesar_fuerza_bruta(
+                    detector_fuerza_bruta,
+                    procesador,
+                    motor,
+                    cola_enriquecimiento,
+                    bus_eventos,
+                ),
+                name="detectar-fuerza-bruta",
+            )
+            if configuracion.modo == "real"
+            else None
+        )
         yield
         await cancelar_tarea(tarea_ingesta)
         await cancelar_tarea(tarea_mantenimiento)
+        await cancelar_tarea(tarea_fuerza_bruta)
         await cancelar_tarea(tarea_enriquecimiento)
         motor.dispose()
 
