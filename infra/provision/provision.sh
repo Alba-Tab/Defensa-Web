@@ -26,18 +26,25 @@ DEFENSA_TLS_IP="${DEFENSA_TLS_IP:-192.168.56.20}" \
 install -m 0644 "${REPO_DIR}/infra/suricata/local.rules" /etc/suricata/rules/local.rules
 install -m 0644 "${REPO_DIR}/infra/suricata/disable.conf" /etc/suricata/disable.conf
 install -m 0644 "${REPO_DIR}/infra/suricata/enable.conf" /etc/suricata/enable.conf
+install -m 0644 "${REPO_DIR}/infra/suricata/drop.conf" /etc/suricata/drop.conf
 install -m 0644 "${REPO_DIR}/infra/logrotate/suricata-eve" /etc/logrotate.d/suricata-eve
+install -m 0644 "${REPO_DIR}/infra/logrotate/defensa-access" /etc/logrotate.d/defensa-access
 install -d -m 0755 /etc/systemd/system/suricata.service.d
 install -m 0644 "${REPO_DIR}/infra/systemd/suricata-nfq.conf" \
   /etc/systemd/system/suricata.service.d/nfq.conf
 
 install -m 0644 "${REPO_DIR}/infra/fail2ban/jail.local" /etc/fail2ban/jail.d/defensa-web.local
 install -m 0644 "${REPO_DIR}/infra/fail2ban/defensa-web.conf" /etc/fail2ban/filter.d/defensa-web.conf
+install -m 0644 "${REPO_DIR}/infra/fail2ban/defensa-login.conf" /etc/fail2ban/filter.d/defensa-login.conf
+install -m 0755 "${REPO_DIR}/infra/fail2ban/ignorar_ip.py" /etc/fail2ban/ignorar_ip.py
 install -m 0755 "${REPO_DIR}/infra/nftables/defensa.nft" /etc/nftables.conf
 
 if ! id defensa >/dev/null 2>&1; then
   adduser --system --group --home /opt/defensa --shell /usr/sbin/nologin defensa
 fi
+touch /var/log/defensa/access.log
+chown defensa:defensa /var/log/defensa/access.log
+chmod 0640 /var/log/defensa/access.log
 setfacl -R -m u:defensa:rX /var/log/suricata
 setfacl -d -m u:defensa:rX /var/log/suricata
 install -m 0440 "${REPO_DIR}/infra/sudoers/defensa" /etc/sudoers.d/defensa
@@ -69,6 +76,7 @@ suricata-update --disable-conf /etc/suricata/disable.conf \
   --enable-conf /etc/suricata/enable.conf || true
 nft -c -f /etc/nftables.conf
 nginx -t
+fail2ban-client -t
 suricata -T -c /etc/suricata/suricata.yaml -s /etc/suricata/rules/local.rules
 
 systemctl daemon-reload

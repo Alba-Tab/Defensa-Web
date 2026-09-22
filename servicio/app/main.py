@@ -106,11 +106,12 @@ def crear_aplicacion(ajustes: Ajustes | None = None) -> FastAPI:
         ventana_segundos=configuracion.login_ventana_segundos,
         bloqueo_segundos=configuracion.login_bloqueo_segundos,
     )
-    detector_fuerza_bruta = DetectorFuerzaBruta(
-        configuracion.nginx_access_log,
-        configuracion.brute_force_umbral,
-        configuracion.brute_force_ventana_segundos,
+    jail_login: ActuadorBloqueo = (
+        Fail2banActuator(configuracion.fail2ban_binario, configuracion.fail2ban_jail_login)
+        if configuracion.modo == "real"
+        else DryRunActuator()
     )
+    detector_fuerza_bruta = DetectorFuerzaBruta(jail_login)
     cola_enriquecimiento: asyncio.Queue[int] = asyncio.Queue(maxsize=1000)
 
     @asynccontextmanager
@@ -149,7 +150,7 @@ def crear_aplicacion(ajustes: Ajustes | None = None) -> FastAPI:
                     )
                     sesion.commit()
 
-        # Pb-18: sembrar entradas predeterminadas en la lista blanca si no existen
+        # Pb-18: sembrar y proteger las entradas predeterminadas
         _sembrar_lista_blanca(motor, configuracion.lista_blanca)
 
         resultado_conciliacion = await conciliador.ejecutar()
@@ -222,16 +223,14 @@ def crear_aplicacion(ajustes: Ajustes | None = None) -> FastAPI:
 
 
 def _sembrar_lista_blanca(motor: object, redes_config: tuple[str, ...]) -> None:
-    """Pb-18: crea las entradas predeterminadas de la lista blanca si no existen.
+    """Crea o protege las entradas predeterminadas de la lista blanca.
 
     Se ejecuta al arrancar el servicio.  Las entradas predeterminadas se marcan
     con ``predeterminada=True`` para que la API no las elimine.
     """
     from sqlmodel import Session as _Session
 
-    entradas_default = [
-        (red, "Entrada predeterminada (configuración)") for red in redes_config
-    ]
+    entradas_default = [(red, "Entrada predeterminada (configuración)") for red in redes_config]
     with _Session(motor) as sesion:  # type: ignore[arg-type]
         for ip_o_red, descripcion in entradas_default:
             existe = sesion.exec(
@@ -245,6 +244,9 @@ def _sembrar_lista_blanca(motor: object, redes_config: tuple[str, ...]) -> None:
                         predeterminada=True,
                     )
                 )
+            elif not existe.predeterminada:
+                existe.predeterminada = True
+                sesion.add(existe)
         sesion.commit()
 
 

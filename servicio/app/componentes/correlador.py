@@ -3,7 +3,7 @@ from datetime import timedelta
 from sqlmodel import Session, col, select
 
 from app.dominio.esquemas import EventoEntrada
-from app.dominio.modelos import Evento, Incidente
+from app.dominio.modelos import Evento, Incidente, como_utc
 
 
 class Correlador:
@@ -40,7 +40,9 @@ class Correlador:
             sesion.add(incidente)
             sesion.flush()
         else:
-            incidente.ultima_actividad = max(incidente.ultima_actividad, entrada.fecha_utc)
+            incidente.ultima_actividad = max(
+                como_utc(incidente.ultima_actividad), entrada.fecha_utc
+            )
             incidente.severidad = max(incidente.severidad, severidad_incidente)
 
         assert incidente.id is not None

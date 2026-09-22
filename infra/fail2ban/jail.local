@@ -5,8 +5,22 @@ logpath = /var/log/defensa/acciones.log
 backend = polling
 maxretry = 5
 findtime = 60
-bantime = 600
+bantime = 86400
 banaction = nftables-multiport
-port = http,https
+port = http,https,8000
 protocol = tcp
 ignoreip = 127.0.0.0/8 ::1 192.168.56.0/24 192.168.56.1
+
+[defensa-login]
+enabled = true
+filter = defensa-login
+logpath = /var/log/defensa/access.log
+backend = polling
+maxretry = 5
+findtime = 60
+bantime = 600
+banaction = nftables-multiport
+port = http,https,8000
+protocol = tcp
+ignoreip = 127.0.0.0/8 ::1 192.168.56.0/24 192.168.56.1
+ignorecommand = /usr/bin/python3 /etc/fail2ban/ignorar_ip.py <ip> /opt/defensa/datos/defensa.db

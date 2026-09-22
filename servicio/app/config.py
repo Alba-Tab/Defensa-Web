@@ -25,14 +25,13 @@ class Ajustes(BaseSettings):
     intervalo_mantenimiento_segundos: float = Field(default=5, gt=0, le=300)
     lista_blanca: Annotated[tuple[str, ...], NoDecode] = ("127.0.0.0/8", "::1/128")
     eve_json: Path = Path("/var/log/suricata/eve.json")
-    nginx_access_log: Path = Path("/var/log/nginx/access.log")
-    brute_force_umbral: int = Field(default=5, ge=1, le=100)
-    brute_force_ventana_segundos: int = Field(default=600, ge=1)
+    login_access_log: Path = Path("/var/log/defensa/access.log")
     systemctl_binario: Path = Path("/usr/bin/systemctl")
     suricata_servicio: str = "suricata"
     salud_timeout_segundos: float = Field(default=2, gt=0, le=10)
     fail2ban_binario: Path = Path("/usr/bin/fail2ban-client")
     fail2ban_jail: str = "defensa-web"
+    fail2ban_jail_login: str = "defensa-login"
     nginx_servicio: str = "nginx"
     fail2ban_servicio: str = "fail2ban"
     ollama_url: str | None = None

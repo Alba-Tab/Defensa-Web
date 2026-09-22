@@ -1,290 +1,143 @@
-# Evidencias de Historias de Usuario — Sandoval Martinez Erick Noel
+# Evidencia de Pb-13, Pb-14 y Pb-18
 
-| Campo          | Detalle                                           |
-| -------------- | ------------------------------------------------- |
-| Desarrollador  | Sandoval Martinez Erick Noel                      |
-| Proyecto       | Plataforma de Defensa Web en Tiempo de Ejecución  |
-| Materia        | Ingeniería de Software II — UAGRM                 |
-| Sprint         | Sprint 2                                          |
-| Fecha          | 21 de septiembre de 2026                          |
+Rama: `feature/erick-Pb13-Pb14-Pb18` · VM de laboratorio: `192.168.56.20`.
 
----
+Las comprobaciones descritas aquí se realizaron el 21 de septiembre de 2026.
+Se distinguen las pruebas automatizadas del servicio y las verificaciones en la
+VM. No se presenta un resultado esperado como si fuera un resultado observado.
 
-## Resumen de HU asignadas
-
-| ID    | Nombre corto                        | PHU | Módulo | Estado    |
-| ----- | ----------------------------------- | --- | ------ | --------- |
-| Pb-13 | Detección de escaneo                | 5   | M2     | Pendiente |
-| Pb-14 | Detección de sondeo de archivos     | 3   | M2     | Terminada |
-| Pb-18 | Gestión de lista blanca             | 5   | M3     | Terminada |
-
-**Total: 13 PHU**
-
----
-
-## Pb-18 — Gestión de lista blanca
-
-### Descripción
-
-Permite al administrador consultar, agregar y quitar direcciones IP o redes CIDR
-de la lista blanca a través de la API, sin necesidad de editar archivos de
-configuración en el servidor. Cierra la brecha documentada en `Modelo_datos.md`
-(sección 13, punto 3): la tabla `lista_blanca` existía pero ningún componente
-la leía ni la escribía.
-
-### Archivos modificados / creados
-
-| Archivo                                                         | Acción     | Descripción del cambio                                         |
-| --------------------------------------------------------------- | ---------- | -------------------------------------------------------------- |
-| `servicio/app/api/lista_blanca.py`                              | Creado     | Endpoints GET, POST y DELETE de `/api/lista-blanca`            |
-| `servicio/app/dominio/modelos.py`                               | Modificado | Campo `predeterminada: bool` agregado a `ListaBlanca`          |
-| `servicio/app/dominio/esquemas.py`                              | Modificado | Clases `ListaBlancaEntrada` y `ListaBlancaSalida` agregadas    |
-| `servicio/app/componentes/politicas.py`                         | Modificado | `MotorPoliticas` lee la lista blanca de la BD en cada decisión |
-| `servicio/app/main.py`                                          | Modificado | Router registrado; entradas predeterminadas sembradas al inicio|
-| `servicio/alembic/versions/0007_lista_blanca_predeterminada.py` | Creado     | Migración: columna `predeterminada` en tabla `lista_blanca`    |
-| `servicio/tests/test_migraciones.py`                            | Modificado | Actualizado a revisión `0007` y verificación de columna nueva  |
-
-### Criterios de aceptación verificados
-
-| # | Criterio                                                                                     | Resultado |
-| - | -------------------------------------------------------------------------------------------- | --------- |
-| 1 | `GET /api/lista-blanca` devuelve entradas marcando las predeterminadas como no editables     | OK        |
-| 2 | `POST /api/lista-blanca` agrega IP/red CIDR validada; valor inválido responde 422            | OK        |
-| 3 | `DELETE /api/lista-blanca/{id}` elimina no predeterminadas; predeterminadas responden 403    | OK        |
-| 4 | El `MotorPoliticas` consulta la tabla en cada decisión de bloqueo (brecha cerrada)           | OK        |
-| 5 | IP en lista blanca genera solo alerta, nunca baneo                                           | OK        |
-| 6 | Toda alta/baja queda auditada (actor, fecha, IP/red afectada)                                | OK        |
-| 7 | Entradas predeterminadas sembradas al arrancar el servicio                                   | OK        |
-
-### Pruebas realizadas
-
-#### 1. Ver lista blanca inicial (entradas predeterminadas)
-
-```bash
-TOKEN=$(curl -s -X POST http://192.168.56.20:8000/api/auth/login \
-  -H 'Content-Type: application/json' \
-  -d '{"usuario":"admin","contrasena":"admin"}' \
-  | python3 -c "import sys,json;print(json.load(sys.stdin)['access_token'])")
-
-curl -s http://192.168.56.20:8000/api/lista-blanca \
-  -H "Authorization: Bearer $TOKEN" | python3 -m json.tool
-```
-
-**Resultado esperado:** Lista con entradas `127.0.0.0/8` y `::1/128`
-marcadas con `"predeterminada": true`.
-
----
-
-#### 2. Agregar una IP a la lista blanca
-
-```bash
-curl -s -X POST http://192.168.56.20:8000/api/lista-blanca \
-  -H "Authorization: Bearer $TOKEN" \
-  -H 'Content-Type: application/json' \
-  -d '{"ip_o_red": "10.10.10.0/24", "descripcion": "Red de oficina prueba"}' \
-  | python3 -m json.tool
-```
-
-**Resultado esperado:** HTTP 201 con la entrada creada y `"predeterminada": false`.
-
----
-
-#### 3. Intentar agregar una IP inválida (debe rechazarse)
-
-```bash
-curl -s -X POST http://192.168.56.20:8000/api/lista-blanca \
-  -H "Authorization: Bearer $TOKEN" \
-  -H 'Content-Type: application/json' \
-  -d '{"ip_o_red": "esto-no-es-una-ip"}' \
-  | python3 -m json.tool
-```
-
-**Resultado esperado:** HTTP 422 — valor no válido de CIDR.
-
----
-
-#### 4. Eliminar una entrada no predeterminada
-
-```bash
-# Reemplazar {ID} con el id devuelto en el paso 2
-curl -s -X DELETE http://192.168.56.20:8000/api/lista-blanca/{ID} \
-  -H "Authorization: Bearer $TOKEN" | python3 -m json.tool
-```
-
-**Resultado esperado:** HTTP 200 con `"estado": "eliminado"`.
-
----
-
-#### 5. Intentar eliminar una entrada predeterminada (debe rechazarse)
-
-```bash
-curl -s -X DELETE http://192.168.56.20:8000/api/lista-blanca/1 \
-  -H "Authorization: Bearer $TOKEN" | python3 -m json.tool
-```
-
-**Resultado esperado:** HTTP 403 — entradas predeterminadas no eliminables.
-
----
-
-#### 6. IP en lista blanca no recibe baneo (efecto en motor de políticas)
-
-```bash
-# Agregar IP a la lista blanca
-curl -s -X POST http://192.168.56.20:8000/api/lista-blanca \
-  -H "Authorization: Bearer $TOKEN" \
-  -H 'Content-Type: application/json' \
-  -d '{"ip_o_red": "203.0.113.99", "descripcion": "IP de prueba protegida"}'
-
-# Simular 6 ataques desde esa IP (supera umbral de Pb-6)
-for i in 1 2 3 4 5 6; do
-  curl -s -X POST http://192.168.56.20:8000/api/simulacion/eventos \
-    -H "Authorization: Bearer $TOKEN" \
-    -H 'Content-Type: application/json' \
-    -d "{\"fecha_utc\":\"2026-09-21T20:0${i}:00\",\"ip_origen\":\"203.0.113.99\",\"sid\":100000${i},\"firma\":\"SQLi test\",\"categoria\":\"web-application-attack\",\"severidad_firma\":1,\"metodo\":\"GET\",\"url\":\"/buscar?q=1 OR 1=1\"}"
-done
-
-# Verificar que NO hay baneo para esa IP
-curl -s "http://192.168.56.20:8000/api/baneos?estado=vigente" \
-  -H "Authorization: Bearer $TOKEN" | python3 -m json.tool
-```
-
-**Resultado esperado:** Lista de baneos vacía para `203.0.113.99`.
-
----
-
-### Verificación en el panel web
-
-| Acción                                                   | URL / Lugar                                           |
-| -------------------------------------------------------- | ----------------------------------------------------- |
-| Ver los 3 endpoints nuevos                               | http://192.168.56.20:8000/docs — sección lista-blanca |
-| Verificar que IP protegida no aparece en bloqueos        | http://192.168.56.20:8000 — sección Bloqueos vigentes |
-| Ver registro de auditoría de altas y bajas               | Tabla `auditoria` en la BD, campo `accion`            |
-
----
+| HU | Resultado | Evidencia |
+| --- | --- | --- |
+| Pb-13 | Implementada y probada | Suricata + `ffuf` real: 12 alertas y un incidente; prueba automatizada de 120 eventos y un baneo |
+| Pb-14 | Implementada y probada | Cinco solicitudes HTTPS: cinco alertas y un incidente; prueba automatizada de baneo |
+| Pb-18 | Implementada y probada | API, validación, auditoría, migración y protección probadas automáticamente y en VM |
 
 ## Pb-13 — Detección de escaneo
 
-> Estado: Pendiente de implementación
+La firma local SID `1000004` detecta User-Agents de escáneres. Incluye
+`Nikto` y el User-Agent predeterminado de `ffuf`, `Fuzz Faster U Fool`.
+Suricata registra inicialmente la categoría genérica `Web Application Attack`;
+`EveSource` la traduce a `escaneo` por SID. La firma tiene prioridad sobre una
+predicción contradictoria del clasificador para el `tipo_ataque` del incidente.
+Los eventos de la misma IP y categoría se correlacionan en la ventana de cinco
+minutos. El motor de Pb-6 aplica el umbral de cinco alertas de severidad 1 o 2.
 
-### Descripción
+Pruebas automatizadas:
 
-Detectar cuando un atacante usa herramientas de reconocimiento automático
-(Nikto, ffuf) contra la plataforma. Los eventos deben agruparse en un único
-incidente por IP dentro de la ventana de correlación de 5 minutos.
+- Un PCAP procesado por Suricata detectó SID `1000004` con User-Agent `Nikto/2.5`
+  y con `Fuzz Faster U Fool v2.1.0`.
+- Veinte páginas de catálogo con User-Agent `Mozilla/5.0` no generaron alertas
+  de las firmas locales.
+- 120 alertas EVE de `ffuf` de una IP se procesaron como 120 eventos, un solo
+  incidente de tipo `escaneo` y un solo baneo a partir del quinto evento.
 
-### Criterios de aceptación
-
-| # | Criterio                                                                                 | Resultado   |
-| - | ---------------------------------------------------------------------------------------- | ----------- |
-| 1 | Escaneo con Nikto/ffuf genera múltiples alertas de categoría `escaneo`                   | Pendiente   |
-| 2 | Eventos del mismo escaneo se agrupan en un único incidente por IP (ventana 5 min)        | Pendiente   |
-| 3 | Si supera el umbral de Pb-6, la IP se bloquea automáticamente sin lógica nueva           | Pendiente   |
-| 4 | Navegación legítima con muchas páginas no se confunde con escaneo (sin falsos positivos) | Pendiente   |
-| 5 | Prueba documentada con Nikto/ffuf — baneo tras superar el umbral                         | Pendiente   |
-
----
-
-## Pb-14 — Detección de sondeo de archivos sensibles
-
-> Estado: Terminada
-
-### Descripción
-
-Detectar peticiones a rutas de archivos sensibles (`.env`, `.git/config`,
-copias `.bak`, `wp-config.php.bak`, etc.) que podrían revelar credenciales
-o configuración interna del servidor.
-
-### Archivos modificados / creados
-
-| Archivo                                       | Acción     | Descripción del cambio                                                      |
-| --------------------------------------------- | ---------- | --------------------------------------------------------------------------- |
-| `infra/suricata/local.rules`                  | Modificado | SID 1000002 expandido + nuevo SID 1000003 para archivos de respaldo         |
-| `servicio/app/componentes/clasificador.py`    | Modificado | Agregado `"sondeo_archivos": 2` al diccionario de severidades               |
-
-### Reglas de Suricata implementadas
-
-| SID     | Detecta                                                                                        | Acción |
-| ------- | ---------------------------------------------------------------------------------------------- | ------ |
-| 1000002 | `.env`, `.git/config`, `.htaccess`, `.htpasswd`, `wp-config.php`, `database.sql`, `id_rsa`, `backup`, `config.php` | alert  |
-| 1000003 | Archivos `.bak`, `.old`, `.orig`, `.save`, `.swp`                                              | alert  |
-
-### Decisión de arquitectura (Criterio 3)
-
-El clasificador IA (`ClasificadorJoblib`) no tiene una clase preentrenada llamada
-`sondeo_archivos`. Se optó por registrar la severidad `"sondeo_archivos": 2` en
-el diccionario `_severidades` del clasificador para que, si en un futuro
-reentrenamiento el modelo aprende esta clase, la severidad ya esté definida.
-Mientras tanto, el incidente conserva la categoría base del evento de Suricata
-(`web-application-attack`) y la IA lo clasifica según su mejor predicción
-(normalmente `escaneo`). Esto no requiere modificar ninguna lógica adicional.
-
-### Criterios de aceptación verificados
-
-| # | Criterio                                                                                     | Resultado |
-| - | -------------------------------------------------------------------------------------------- | --------- |
-| 1 | Peticiones a `.env`, `.git/config`, `*.bak` generan alerta de categoría `sondeo_archivos`   | OK        |
-| 2 | Evento se agrupa como incidente con `tipo_ataque` asignado por el clasificador               | OK        |
-| 3 | Decisión documentada: clasificador mapea `sondeo_archivos` como clase propia (severidad 2)  | OK        |
-| 4 | Reincidencia de sondeos deriva en bloqueo si supera umbral de Pb-6 (sin lógica adicional)   | OK        |
-| 5 | Prueba con `curl` contra lista de rutas sensibles conocidas                                  | OK        |
-
-### Pruebas realizadas
-
-#### 1. Sondeo de archivos de configuración
+Prueba en la VM después de `vagrant provision`:
 
 ```bash
-curl -s http://192.168.56.20/.env
-curl -s http://192.168.56.20/.git/config
-curl -s http://192.168.56.20/.htpasswd
-curl -s http://192.168.56.20/wp-config.php
-curl -s http://192.168.56.20/database.sql
+vagrant ssh -c 'sudo apt-get install -y --no-install-recommends ffuf' # Si falta ffuf
+vagrant ssh -c 'ffuf -noninteractive -s -rate 2 -t 1 \
+  -w /vagrant/pruebas/ffuf-rutas-pb13.txt \
+  -u https://127.0.0.1/FUZZ'
 ```
 
-**Resultado esperado:** Suricata dispara SID 1000002 por cada petición.
-El panel muestra incidentes nuevos en la sección "Historial de incidentes".
+Se observaron 12 rutas procesadas, 12 eventos con SID `1000004` desde
+`127.0.0.1` y un incidente con `categoria=escaneo` y `tipo_ataque=escaneo`.
+No se esperaba un baneo en esta prueba porque el loopback está en la lista
+blanca. La prueba automatizada usa una IP no protegida para validar el baneo.
 
----
+Limitación: la firma identifica herramientas por User-Agent; un escáner que lo
+suplante o lo aleatorice puede evadir esta firma. Una detección conductual
+independiente del User-Agent queda fuera de esta implementación.
 
-#### 2. Sondeo de archivos de respaldo
+## Pb-14 — Sondeo de archivos sensibles
+
+La firma SID `1000002` detecta rutas como `.env`, `.git/config`, `.htpasswd`,
+`wp-config.php` y `database.sql`. La SID `1000003` detecta extensiones de copia
+de respaldo como `.bak`, `.old`, `.orig`, `.save` y `.swp`. Ambas se traducen a
+la categoría `sondeo_archivos` en `EveSource` y se correlacionan en un incidente
+de `tipo_ataque=sondeo_archivos`.
+
+Decisión sobre Pb-20: el modelo local actual no fue entrenado con la clase
+`sondeo_archivos`. Su predicción se conserva en `evento.clase_ia`, pero una
+firma local específica prevalece para `incidente.tipo_ataque`. Esto cumple la
+categoría funcional sin atribuir al modelo una clase que todavía no conoce.
+
+Pruebas automatizadas:
+
+- El PCAP de Suricata generó SID `1000002` para `/.env` y SID `1000003` para
+  `/settings.yml.bak`.
+- Cinco alertas de una IP no protegida se agruparon en un incidente
+  `sondeo_archivos` y dispararon un baneo.
+- Una predicción de IA `escaneo` con confianza 0,99 no cambió el tipo
+  `sondeo_archivos` derivado de la firma.
+
+Prueba HTTPS en la VM:
 
 ```bash
-curl -s http://192.168.56.20/config.php.bak
-curl -s http://192.168.56.20/index.html.old
-curl -s http://192.168.56.20/app.js.swp
-curl -s http://192.168.56.20/settings.yml.orig
-curl -s http://192.168.56.20/.env.save
+for ruta_prueba in '/.env' '/.git/config' '/settings.yml.bak' \
+  '/wp-config.php' '/database.sql'; do
+  curl --noproxy '*' -k -sS -o /dev/null \
+    "https://192.168.56.20$ruta_prueba"
+done
 ```
 
-**Resultado esperado:** Suricata dispara SID 1000003 por cada petición.
-Los eventos se agrupan en incidentes por IP en la ventana de 5 minutos.
+Se observaron cuatro eventos SID `1000002`, uno SID `1000003` y un incidente
+con `categoria=sondeo_archivos` y `tipo_ataque=sondeo_archivos`. La IP de la
+laptop (`192.168.56.1`) está protegida por la lista blanca; por ello la prueba
+en VM no debía banearla.
 
----
+## Pb-18 — Gestión de lista blanca
 
-#### 3. Sondeo agresivo (simula escáner)
+La API autenticada permite `GET /api/lista-blanca`, `POST /api/lista-blanca` y
+`DELETE /api/lista-blanca/{id}`. Las IP y CIDR se validan y normalizan antes de
+guardarse. El alta duplicada responde 409; la entrada inválida, 422; y la baja
+de una predeterminada, 403. Toda alta y baja realizada por la API crea una
+entrada de auditoría con actor, fecha e IP/red afectada.
+
+Al arrancar, el servicio siembra las redes configuradas como predeterminadas
+y corrige el indicador `predeterminada` en una fila que ya existiera antes de
+la migración. El motor de políticas combina siempre esas redes protegidas con
+las entradas dinámicas de la base de datos; la mera existencia de una entrada
+dinámica ya no desactiva la protección del loopback o de administración.
+
+Pruebas automatizadas:
+
+- GET sin token devuelve 401; GET autenticado marca `127.0.0.0/8` y `::1/128`
+  como predeterminadas.
+- POST inválido no modifica la base; POST válido normaliza CIDR; POST duplicado
+  responde 409.
+- DELETE de una entrada dinámica deja auditoría; DELETE de una predeterminada
+  responde 403.
+- Una fila predeterminada migrada con `predeterminada=false` vuelve a quedar
+  protegida al sembrar.
+- Una red configurada sigue excluida del baneo aun cuando la tabla contiene
+  otras entradas.
+- Una red dinámica excluye el baneo; tras eliminarla, el siguiente evento
+  activa de nuevo la política y puede producir un baneo.
+
+La VM tenía configuradas además las redes administrativas
+`192.168.56.0/24` y `192.168.56.1/32`. Las solicitudes de comprobación desde
+la laptop y desde el loopback generaron incidentes, sin banear esas IP. La
+API en VM también pasó una prueba autenticada de consulta, protección de
+predeterminadas, validación, alta, baja y auditoría. La entrada dinámica de
+prueba se retiró al finalizar:
 
 ```bash
-curl -s http://192.168.56.20/.env
-curl -s http://192.168.56.20/.git/config
-curl -s http://192.168.56.20/backup/database.sql
-curl -s http://192.168.56.20/id_rsa
-curl -s http://192.168.56.20/wp-config.php
-curl -s http://192.168.56.20/.htaccess
-curl -s http://192.168.56.20/config.php.bak
-curl -s http://192.168.56.20/.htpasswd
+vagrant ssh -c 'sudo /opt/defensa/venv/bin/python /vagrant/pruebas/verificar_pb18_vm.py'
 ```
 
-**Resultado esperado:** Si supera el umbral de eventos de Pb-6,
-la IP es bloqueada automáticamente y aparece en "Bloqueos vigentes".
+La verificación de infraestructura terminó con todos los servicios en estado OK:
 
-### Verificación en el panel web
+```bash
+vagrant ssh -c 'sudo bash /vagrant/infra/verificar.sh'
+```
 
-| Acción                                        | URL / Lugar                                    |
-| --------------------------------------------- | ---------------------------------------------- |
-| Verificar incidentes generados por el sondeo  | http://192.168.56.20 — Historial de incidentes |
-| Ver tipos de ataque detectados                | http://192.168.56.20 — gráfico Tipos de ataque |
-| Ver IP del atacante en el ranking             | http://192.168.56.20 — IPs con más incidentes  |
-| Verificar bloqueo automático (si aplica)      | http://192.168.56.20 — Bloqueos vigentes       |
+## Comprobación de calidad
 
----
+```bash
+make check PYTHON=.venv/bin/python
+```
 
-*Documento generado el 21 de septiembre de 2026. Se actualiza conforme avance la implementacion.*
+Resultado observado: Ruff, formato, mypy, 79 pruebas y configuración de
+infraestructura correctos. Las únicas advertencias son deprecaciones de
+dependencias usadas por las pruebas y Alembic.

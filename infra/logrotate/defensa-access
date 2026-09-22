@@ -1,0 +1,8 @@
+/var/log/defensa/access.log {
+    daily
+    rotate 7
+    compress
+    missingok
+    notifempty
+    copytruncate
+}

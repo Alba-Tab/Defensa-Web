@@ -39,8 +39,11 @@ comprobar "nftables" nft -c -f /etc/nftables.conf
 comprobar "tabla nftables de defensa cargada" nft list table inet defensa
 comprobar "servicio Fail2ban activo" systemctl is-active --quiet fail2ban
 comprobar "jail Fail2ban" fail2ban-client status defensa-web
+comprobar "jail de login" fail2ban-client status defensa-login
 comprobar "permisos del actuador Fail2ban" sudo -u defensa sudo -n \
   /usr/bin/fail2ban-client get defensa-web banip
+comprobar "permisos del jail de login" sudo -u defensa sudo -n \
+  /usr/bin/fail2ban-client get defensa-login banip
 comprobar "servicio de defensa" systemctl is-active --quiet defensa
 comprobar "API de defensa" curl -fsS http://127.0.0.1:8000/login
 comprobar "aplicación protegida" curl -fsS http://127.0.0.1:3000

@@ -18,15 +18,26 @@ def _configuracion_suricata() -> Path | None:
     return next((ruta for ruta in candidatas if ruta.exists()), None)
 
 
-def _flujo_http(ip: str, puerto: int, uri: str, desplazamiento: int) -> list[Ether]:
+def _flujo_http(
+    ip: str,
+    puerto: int,
+    uri: str,
+    desplazamiento: int,
+    user_agent: str = "prueba-pb2",
+    *,
+    metodo: str = "GET",
+    cuerpo: str = "",
+) -> list[Ether]:
     servidor = "198.51.100.20"
     secuencia_cliente = 1000 + desplazamiento
     secuencia_servidor = 9000 + desplazamiento
     peticion = (
-        f"GET {uri} HTTP/1.1\r\n"
+        f"{metodo} {uri} HTTP/1.1\r\n"
         "Host: app.lab\r\n"
-        "User-Agent: prueba-pb2\r\n"
+        f"User-Agent: {user_agent}\r\n"
+        f"Content-Length: {len(cuerpo)}\r\n"
         "Connection: close\r\n\r\n"
+        f"{cuerpo}"
     ).encode()
     ethernet = Ether(src="02:00:00:00:00:10", dst="02:00:00:00:00:20")
     ethernet_respuesta = Ether(src="02:00:00:00:00:20", dst="02:00:00:00:00:10")
@@ -115,19 +126,29 @@ def test_suricata_detecta_sqli_y_no_marca_navegacion_legitima(tmp_path: Path) ->
     assert not any(evento.get("src_ip") == "192.0.2.11" for evento in alertas)
 
 
-def test_suricata_detecta_xss_script_tag(tmp_path: Path) -> None:
-    """Pb-11: Verifica que Suricata detecta XSS con script tag (SID 1000005)"""
+def test_suricata_detecta_sondeo_y_escaneo_sin_marcar_paginacion(tmp_path: Path) -> None:
     binario = shutil.which("suricata")
     configuracion = _configuracion_suricata()
     if binario is None or configuracion is None:
         pytest.skip("Suricata no está instalado en este equipo")
 
-    pcap = tmp_path / "trafico.pcap"
-    salida = tmp_path / "salida"
+    pcap = tmp_path / "trafico-hu.pcap"
+    salida = tmp_path / "salida-hu"
     salida.mkdir()
-    paquetes = _flujo_http("192.0.2.20", 12347, "/search?q=%3Cscript%3Ealert(1)%3C/script%3E", 0) + _flujo_http(
-        "192.0.2.21", 12348, "/search?q=keyboard", 100
+    paquetes = (
+        _flujo_http("192.0.2.21", 12351, "/.env", 0)
+        + _flujo_http("192.0.2.22", 12352, "/settings.yml.bak", 100)
+        + _flujo_http("192.0.2.23", 12353, "/admin", 200, "Nikto/2.5")
+        + _flujo_http("192.0.2.25", 12355, "/unknown", 400, "Fuzz Faster U Fool v2.1.0")
     )
+    for indice in range(20):
+        paquetes += _flujo_http(
+            "192.0.2.24",
+            13000 + indice,
+            f"/products?page={indice}",
+            500 + indice * 100,
+            "Mozilla/5.0",
+        )
     wrpcap(str(pcap), paquetes)
 
     subprocess.run(
@@ -147,37 +168,29 @@ def test_suricata_detecta_xss_script_tag(tmp_path: Path) -> None:
         capture_output=True,
         text=True,
     )
-    eventos = [
-        json.loads(linea)
+    alertas = [
+        evento
         for linea in (salida / "eve.json").read_text(encoding="utf-8").splitlines()
+        if (evento := json.loads(linea)).get("event_type") == "alert"
     ]
-    alertas = [evento for evento in eventos if evento.get("event_type") == "alert"]
 
-    assert len(alertas) == 1
-    alerta = alertas[0]
-    assert alerta["src_ip"] == "192.0.2.20"
-    assert alerta["alert"]["signature_id"] == 1000005
-    assert "XSS" in alerta["alert"]["signature"]
-    assert alerta["alert"]["category"] == "Web Application Attack"
-    assert alerta["http"]["http_method"] == "GET"
-    assert not any(evento.get("src_ip") == "192.0.2.21" for evento in alertas)
+    assert {(alerta["src_ip"], alerta["alert"]["signature_id"]) for alerta in alertas} == {
+        ("192.0.2.21", 1000002),
+        ("192.0.2.22", 1000003),
+        ("192.0.2.23", 1000004),
+        ("192.0.2.25", 1000004),
+    }
 
 
-def test_suricata_detecta_path_traversal(tmp_path: Path) -> None:
-    """Pb-12: Verifica que Suricata detecta path traversal (SID 1000008-1000010)"""
+def _alertas_prueba(tmp_path: Path, flujos: list[list[Ether]]) -> list[dict[str, object]]:
     binario = shutil.which("suricata")
     configuracion = _configuracion_suricata()
     if binario is None or configuracion is None:
         pytest.skip("Suricata no está instalado en este equipo")
-
     pcap = tmp_path / "trafico.pcap"
     salida = tmp_path / "salida"
     salida.mkdir()
-    paquetes = _flujo_http("192.0.2.30", 12349, "/download?file=%2e%2e%2f%2e%2e%2fetc%2fpasswd", 0) + _flujo_http(
-        "192.0.2.31", 12350, "/download?file=documento.pdf", 100
-    )
-    wrpcap(str(pcap), paquetes)
-
+    wrpcap(str(pcap), [paquete for flujo in flujos for paquete in flujo])
     subprocess.run(
         [
             binario,
@@ -195,18 +208,47 @@ def test_suricata_detecta_path_traversal(tmp_path: Path) -> None:
         capture_output=True,
         text=True,
     )
-    eventos = [
-        json.loads(linea)
+    return [
+        evento
         for linea in (salida / "eve.json").read_text(encoding="utf-8").splitlines()
+        if (evento := json.loads(linea)).get("event_type") == "alert"
     ]
-    alertas = [evento for evento in eventos if evento.get("event_type") == "alert"]
 
-    assert len(alertas) >= 1
-    traversal_alerts = [a for a in alertas if a["alert"]["signature_id"] in [1000008, 1000009, 1000010]]
-    assert len(traversal_alerts) >= 1
-    alerta = traversal_alerts[0]
-    assert alerta["src_ip"] == "192.0.2.30"
-    assert "path traversal" in alerta["alert"]["signature"].lower()
-    assert alerta["alert"]["category"] == "Web Application Attack"
-    assert alerta["http"]["http_method"] == "GET"
-    assert not any(evento.get("src_ip") == "192.0.2.31" for evento in alertas)
+
+def test_suricata_detecta_xss_get_y_post_sin_falso_positivo(tmp_path: Path) -> None:
+    alertas = _alertas_prueba(
+        tmp_path,
+        [
+            _flujo_http("192.0.2.30", 14001, "/search?q=%3Cscript%3Ealert(1)%3C/script%3E", 0),
+            _flujo_http(
+                "192.0.2.31",
+                14002,
+                "/api/search",
+                100,
+                metodo="POST",
+                cuerpo="q=<img src=x onerror=alert(1)>",
+            ),
+            _flujo_http("192.0.2.32", 14003, "/search?q=keyboard", 200),
+        ],
+    )
+    pares = {(alerta["src_ip"], alerta["alert"]["signature_id"]) for alerta in alertas}
+    assert ("192.0.2.30", 1000005) in pares
+    assert ("192.0.2.31", 1000007) in pares
+    assert not any(ip == "192.0.2.32" for ip, _ in pares)
+
+
+def test_suricata_detecta_traversal_y_documenta_doble_codificacion(tmp_path: Path) -> None:
+    alertas = _alertas_prueba(
+        tmp_path,
+        [
+            _flujo_http("192.0.2.40", 14011, "/download?file=../../etc/passwd", 0),
+            _flujo_http("192.0.2.41", 14012, "/download?file=%2e%2e%2fetc%2fpasswd", 100),
+            _flujo_http("192.0.2.42", 14013, "/download?file=%252e%252e%252fetc%252fpasswd", 200),
+            _flujo_http("192.0.2.43", 14014, "/download?file=guide.pdf", 300),
+        ],
+    )
+    pares = {(alerta["src_ip"], alerta["alert"]["signature_id"]) for alerta in alertas}
+    assert ("192.0.2.40", 1000008) in pares
+    assert any(ip == "192.0.2.41" and sid in {1000008, 1000009} for ip, sid in pares)
+    assert not any(ip == "192.0.2.43" for ip, _ in pares)
+    # El resultado de .42 se consigna en la evidencia: no es condición de aceptación bloquearlo.

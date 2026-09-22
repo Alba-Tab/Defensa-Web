@@ -1,0 +1,6 @@
+2026-09-22T15:42:30+00:00 DEFENSA_LOGIN ip=198.51.100.42 method=POST path=/api/auth/login status=401
+2026-09-22T15:42:35+00:00 DEFENSA_LOGIN ip=198.51.100.42 method=POST path=/api/auth/login status=401
+2026-09-22T15:42:40+00:00 DEFENSA_LOGIN ip=198.51.100.42 method=POST path=/api/auth/login status=403
+2026-09-22T15:42:45+00:00 DEFENSA_LOGIN ip=198.51.100.42 method=POST path=/api/auth/login status=401
+2026-09-22T15:42:50+00:00 DEFENSA_LOGIN ip=198.51.100.42 method=POST path=/api/auth/login status=401
+2026-09-22T15:42:51+00:00 DEFENSA_LOGIN ip=198.51.100.43 method=POST path=/api/auth/login status=401

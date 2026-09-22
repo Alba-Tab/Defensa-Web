@@ -37,7 +37,7 @@
 
 **Payloads probados**:
 - `<script>alert(1)</script>` → SID 1000005
-- `onclick=alert(1)` → SID 1000006  
+- `onclick=alert(1)` → SID 1000006
 - POST con `<img src=x onerror=alert(1)>` → SID 1000007
 
 ## Pb-12: detectar path traversal

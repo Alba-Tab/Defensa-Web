@@ -130,9 +130,7 @@ class ListaBlancaEntrada(BaseModel):
         try:
             red = ip_network(valor, strict=False)
         except ValueError as error:
-            raise ValueError(
-                f"'{valor}' no es una dirección IP ni una red CIDR válida"
-            ) from error
+            raise ValueError(f"'{valor}' no es una dirección IP ni una red CIDR válida") from error
         return str(red)
 
 
@@ -145,4 +143,3 @@ class ListaBlancaSalida(BaseModel):
     ip_o_red: str
     descripcion: str | None
     predeterminada: bool
-

@@ -1,4 +1,5 @@
 from datetime import UTC, datetime
+from ipaddress import ip_address
 
 from fastapi import APIRouter, HTTPException, Request, Response, status
 from sqlmodel import select
@@ -55,6 +56,19 @@ def _autenticar(
     )
     if not valido or usuario is None or not usuario.activo:
         request.app.state.limitador_login.registrar_fallo(ip, ahora)
+        if request.app.state.ajustes.modo == "real":
+            try:
+                ip_canonica = str(ip_address(ip))
+                registro = (
+                    f"{ahora.isoformat(timespec='seconds')} DEFENSA_LOGIN ip={ip_canonica} "
+                    "method=POST path=/api/auth/login status=401\n"
+                )
+                with request.app.state.ajustes.login_access_log.open("a", encoding="ascii") as log:
+                    log.write(registro)
+            except (OSError, ValueError) as error:
+                raise HTTPException(
+                    status_code=503, detail="No se pudo registrar el intento de acceso"
+                ) from error
         raise HTTPException(status_code=401, detail="Usuario o contraseña incorrectos")
 
     request.app.state.limitador_login.limpiar(ip)

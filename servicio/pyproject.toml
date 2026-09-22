@@ -16,7 +16,7 @@ dependencies = [
   "jinja2>=3.1,<4",
   "PyJWT>=2.10,<3",
   "pydantic-settings>=2.7,<3",
-  "sqlmodel>=0.0.24,<0.1",
+  "sqlmodel==0.0.42",
   "uvicorn[standard]>=0.34,<1",
 ]
 

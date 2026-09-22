@@ -9,6 +9,11 @@ def ahora_utc() -> datetime:
     return datetime.now(UTC)
 
 
+def como_utc(fecha: datetime) -> datetime:
+    """SQLite devuelve datetimes sin zona; los valores persistidos son UTC."""
+    return fecha.replace(tzinfo=UTC) if fecha.tzinfo is None else fecha.astimezone(UTC)
+
+
 class Usuario(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     nombre: str = Field(unique=True)
@@ -22,7 +27,7 @@ class Incidente(SQLModel, table=True):
     ip_origen: str = Field(index=True)
     categoria: str
     tipo_ataque: str = "indeterminado"
-    severidad: int = Field(ge=1, le=3)
+    severidad: int = Field(ge=1, le=4)
     estado: str = "abierto"
     confianza_clasificador: float | None = None
     severidad_notificada: int | None = None

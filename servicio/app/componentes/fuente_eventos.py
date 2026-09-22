@@ -8,6 +8,20 @@ from urllib.parse import unquote, unquote_plus, urlsplit
 
 from app.dominio.esquemas import EventoEntrada
 
+# Suricata usa la categoría genérica de classtype; la categoría funcional de
+# nuestras firmas locales se determina por SID al ingresar al servicio.
+CATEGORIAS_FIRMAS_LOCALES = {
+    1000002: "sondeo_archivos",
+    1000003: "sondeo_archivos",
+    1000004: "escaneo",
+    1000005: "xss",
+    1000006: "xss",
+    1000007: "xss",
+    1000008: "traversal",
+    1000009: "traversal",
+    1000010: "traversal",
+}
+
 
 class FuenteEventos(Protocol):
     def eventos(self) -> AsyncIterator[EventoEntrada]: ...
@@ -39,6 +53,7 @@ class EveSource:
             if dato.get("event_type") != "alert":
                 return None
             alerta = dato["alert"]
+            sid = int(alerta["signature_id"])
             http = dato.get("http", {})
             url = http.get("url")
             partes = urlsplit(str(url)) if url else None
@@ -46,9 +61,11 @@ class EveSource:
             return EventoEntrada(
                 fecha_utc=datetime.fromisoformat(dato["timestamp"].replace("Z", "+00:00")),
                 ip_origen=dato["src_ip"],
-                sid=int(alerta["signature_id"]),
+                sid=sid,
                 firma=str(alerta["signature"]),
-                categoria=str(alerta.get("category", "sin_categoria")),
+                categoria=CATEGORIAS_FIRMAS_LOCALES.get(
+                    sid, str(alerta.get("category", "sin_categoria"))
+                ),
                 severidad_firma=int(alerta.get("severity", 3)),
                 accion="descarte" if alerta.get("action") == "blocked" else "alerta",
                 metodo=http.get("http_method"),

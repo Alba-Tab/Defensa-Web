@@ -6,8 +6,8 @@ from sqlalchemy import Engine
 from sqlmodel import Session, col, select
 
 from app.componentes.conciliador import Conciliador
-from app.componentes.eventos_tiempo_real import AlertaIncidente, BusEventos
 from app.componentes.detector_fuerza_bruta import DetectorFuerzaBruta
+from app.componentes.eventos_tiempo_real import AlertaIncidente, BusEventos
 from app.componentes.fuente_eventos import FuenteEventos
 from app.componentes.informes import GeneradorInformes
 from app.componentes.notificador import Notificador
@@ -73,14 +73,17 @@ async def procesar_fuerza_bruta(
     bus_eventos: BusEventos,
     intervalo_segundos: float = 30,
 ) -> None:
-    """Detecta intentos de fuerza bruta periódicamente (Pb-17)."""
+    """Asocia los baneos decididos por Fail2ban al ciclo de incidentes."""
     while True:
         await asyncio.sleep(intervalo_segundos)
         try:
-            eventos = await detector.procesar()
-            for evento in eventos:
+            for ip in await detector.baneados():
                 with Session(motor) as sesion:
-                    resultado = await procesador.procesar(evento, sesion)
+                    resultado = await procesador.procesar_baneo_fuerza_bruta(ip, sesion)
+                if resultado.baneo_id is None:
+                    logger.warning("El baneo de login %s no pudo transferirse", ip)
+                    continue
+                await detector.transferir(ip)
                 publicar_incidente_nuevo(resultado, bus_eventos)
                 await cola_enriquecimiento.put(resultado.incidente_id)
         except asyncio.CancelledError:

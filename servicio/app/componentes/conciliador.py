@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from datetime import datetime
 
 from app.componentes.actuador import ActuadorBloqueo
-from app.dominio.modelos import ahora_utc
+from app.dominio.modelos import ahora_utc, como_utc
 from app.repositorio import Repositorio
 
 logger = logging.getLogger(__name__)
@@ -25,7 +25,7 @@ class Conciliador:
         self._actuador = actuador
 
     async def ejecutar(self, ahora: datetime | None = None) -> ResultadoConciliacion:
-        instante = ahora or ahora_utc()
+        instante = como_utc(ahora or ahora_utc())
         try:
             reales = await self._actuador.bloqueos()
         except Exception:
@@ -37,11 +37,11 @@ class Conciliador:
         huerfanos = 0
         errores = 0
         conciliables = self._repositorio.baneos_conciliables()
-        ips_vigentes = {baneo.ip for baneo in conciliables if baneo.expira > instante}
+        ips_vigentes = {baneo.ip for baneo in conciliables if como_utc(baneo.expira) > instante}
 
         for baneo in conciliables:
             assert baneo.id is not None
-            if baneo.expira <= instante:
+            if como_utc(baneo.expira) <= instante:
                 try:
                     if baneo.ip in reales:
                         await self._actuador.liberar(baneo.ip)
