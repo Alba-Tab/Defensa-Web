@@ -1,10 +1,17 @@
+"""Motor de políticas de bloqueo.
+
+Pb-18: la lista blanca se lee de la tabla ``lista_blanca`` en cada evaluación.
+Las redes protegidas de la configuración siempre se aplican además de las
+entradas dinámicas de la tabla.
+"""
+
 from datetime import datetime, timedelta
 from ipaddress import ip_address, ip_network
 
 from sqlmodel import Session, col, select
 
 from app.componentes.actuador import ActuadorBloqueo
-from app.dominio.modelos import Auditoria, Baneo, Evento, Incidente
+from app.dominio.modelos import Auditoria, Baneo, Evento, Incidente, ListaBlanca
 
 
 class MotorPoliticas:
@@ -21,11 +28,22 @@ class MotorPoliticas:
         self._umbral = umbral_eventos
         self._ventana = timedelta(seconds=ventana_segundos)
         self._duracion = timedelta(seconds=duracion_segundos)
-        self._redes_permitidas = tuple(ip_network(red, strict=False) for red in lista_blanca)
+        self._redes_protegidas = tuple(ip_network(red, strict=False) for red in lista_blanca)
+
+    def _ip_en_lista_blanca(self, origen: str, sesion: Session) -> bool:
+        """Comprueba si la IP está en la lista blanca leyendo la BD (Pb-18).
+
+        Las redes de configuración nunca dejan de estar protegidas aunque
+        existan entradas dinámicas o la tabla todavía no esté sembrada.
+        """
+        ip = ip_address(origen)
+        entradas = sesion.exec(select(ListaBlanca)).all()
+        return any(ip in red for red in self._redes_protegidas) or any(
+            ip in ip_network(entrada.ip_o_red, strict=False) for entrada in entradas
+        )
 
     async def evaluar(self, incidente: Incidente, ahora: datetime, sesion: Session) -> Baneo | None:
-        origen = ip_address(incidente.ip_origen)
-        if any(origen in red for red in self._redes_permitidas):
+        if self._ip_en_lista_blanca(incidente.ip_origen, sesion):
             return None
 
         existente = sesion.exec(

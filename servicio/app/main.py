@@ -12,6 +12,7 @@ from app.api.baneos import router as router_baneos
 from app.api.dispositivos import router as router_dispositivos
 from app.api.eventos import router as router_eventos
 from app.api.incidentes import router as router_incidentes
+from app.api.lista_blanca import router as router_lista_blanca
 from app.api.metricas import router as router_metricas
 from app.api.salud import router as router_salud
 from app.api.simulacion import router as router_simulacion
@@ -31,7 +32,7 @@ from app.componentes.notificador import Notificador, NotificadorFirebase, Notifi
 from app.componentes.politicas import MotorPoliticas
 from app.config import Ajustes, obtener_ajustes
 from app.database import crear_motor
-from app.dominio.modelos import Usuario
+from app.dominio.modelos import ListaBlanca, Usuario
 from app.integracion import (
     cancelar_tarea,
     consumir_eventos,
@@ -140,6 +141,9 @@ def crear_aplicacion(ajustes: Ajustes | None = None) -> FastAPI:
                     )
                     sesion.commit()
 
+        # Pb-18: sembrar y proteger las entradas predeterminadas
+        _sembrar_lista_blanca(motor, configuracion.lista_blanca)
+
         resultado_conciliacion = await conciliador.ejecutar()
         app.state.resultado_conciliacion = resultado_conciliacion
 
@@ -190,7 +194,36 @@ def crear_aplicacion(ajustes: Ajustes | None = None) -> FastAPI:
     aplicacion.include_router(router_baneos, prefix="/api")
     aplicacion.include_router(router_dispositivos, prefix="/api")
     aplicacion.include_router(router_eventos, prefix="/api")
+    aplicacion.include_router(router_lista_blanca, prefix="/api")
     return aplicacion
+
+
+def _sembrar_lista_blanca(motor: object, redes_config: tuple[str, ...]) -> None:
+    """Crea o protege las entradas predeterminadas de la lista blanca.
+
+    Se ejecuta al arrancar el servicio.  Las entradas predeterminadas se marcan
+    con ``predeterminada=True`` para que la API no las elimine.
+    """
+    from sqlmodel import Session as _Session
+
+    entradas_default = [(red, "Entrada predeterminada (configuración)") for red in redes_config]
+    with _Session(motor) as sesion:  # type: ignore[arg-type]
+        for ip_o_red, descripcion in entradas_default:
+            existe = sesion.exec(
+                select(ListaBlanca).where(ListaBlanca.ip_o_red == ip_o_red)
+            ).first()
+            if existe is None:
+                sesion.add(
+                    ListaBlanca(
+                        ip_o_red=ip_o_red,
+                        descripcion=descripcion,
+                        predeterminada=True,
+                    )
+                )
+            elif not existe.predeterminada:
+                existe.predeterminada = True
+                sesion.add(existe)
+        sesion.commit()
 
 
 def crear_generador_informes(configuracion: Ajustes) -> GeneradorInformes:

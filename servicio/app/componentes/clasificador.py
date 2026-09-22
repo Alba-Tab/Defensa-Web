@@ -29,6 +29,7 @@ class ClasificadorJoblib:
         "xss": 3,
         "traversal": 3,
         "escaneo": 2,
+        "sondeo_archivos": 2,
         "fuerza_bruta": 2,
         "benigno": 1,
     }

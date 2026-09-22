@@ -190,6 +190,49 @@ def test_lista_blanca_nunca_se_banea(cliente: TestClient) -> None:
     assert asyncio.run(cliente.app.state.actuador.bloqueos()) == {}
 
 
+def test_escaneo_se_correlaciona_y_banea_tras_el_umbral(cliente: TestClient) -> None:
+    cabeceras = {"Authorization": f"Bearer {iniciar_sesion(cliente)}"}
+    entrada = evento("192.0.2.51")
+    entrada.update(
+        sid=1000004,
+        firma="DEFENSA escaneo web detectado (Nikto/ffuf)",
+        categoria="escaneo",
+        severidad_firma=2,
+        url="/admin",
+        user_agent="Nikto/2.5",
+    )
+    respuestas = [
+        cliente.post("/api/simulacion/eventos", json=entrada, headers=cabeceras) for _ in range(5)
+    ]
+
+    assert all(respuesta.status_code == 201 for respuesta in respuestas)
+    assert len({respuesta.json()["incidente_id"] for respuesta in respuestas}) == 1
+    assert all(respuesta.json()["tipo_ataque"] == "escaneo" for respuesta in respuestas)
+    assert respuestas[-1].json()["baneo_id"] is not None
+
+
+def test_sondeo_archivos_conserva_tipo_aunque_ia_no_lo_reconozca(cliente: TestClient) -> None:
+    cabeceras = {"Authorization": f"Bearer {iniciar_sesion(cliente)}"}
+    respuestas = []
+    for indice, ruta in enumerate(
+        ("/.env", "/.git/config", "/config.php.bak", "/.env", "/.git/config")
+    ):
+        entrada = evento("192.0.2.52")
+        entrada.update(
+            sid=1000002 if indice != 2 else 1000003,
+            firma="DEFENSA sondeo de archivo sensible",
+            categoria="sondeo_archivos",
+            severidad_firma=2,
+            url=ruta,
+        )
+        respuestas.append(cliente.post("/api/simulacion/eventos", json=entrada, headers=cabeceras))
+
+    assert all(respuesta.status_code == 201 for respuesta in respuestas)
+    assert len({respuesta.json()["incidente_id"] for respuesta in respuestas}) == 1
+    assert all(respuesta.json()["tipo_ataque"] == "sondeo_archivos" for respuesta in respuestas)
+    assert respuestas[-1].json()["baneo_id"] is not None
+
+
 def test_ip_invalida_se_rechaza_sin_accion_externa(cliente: TestClient) -> None:
     token = iniciar_sesion(cliente)
     respuesta = cliente.post(

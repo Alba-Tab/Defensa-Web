@@ -24,10 +24,14 @@ def test_esquema_nuevo_llega_a_la_revision_vigente(
         obtener_ajustes.cache_clear()
 
     motor = create_engine(url)
-    columnas = {columna["name"] for columna in inspect(motor).get_columns("incidente")}
+    columnas_incidente = {columna["name"] for columna in inspect(motor).get_columns("incidente")}
+    columnas_lista_blanca = {
+        columna["name"] for columna in inspect(motor).get_columns("lista_blanca")
+    }
     with motor.connect() as conexion:
         revision = conexion.execute(text("SELECT version_num FROM alembic_version")).scalar_one()
     motor.dispose()
 
-    assert revision == "0006_modelo_informe"
-    assert "modelo_informe" in columnas
+    assert revision == "0007_lista_blanca_predeterminada"
+    assert "modelo_informe" in columnas_incidente
+    assert "predeterminada" in columnas_lista_blanca
