@@ -6,7 +6,7 @@ from sqlmodel import Field, Relationship, SQLModel
 
 
 def ahora_utc() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(UTC)
 
 
 class Usuario(SQLModel, table=True):

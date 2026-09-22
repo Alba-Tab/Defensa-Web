@@ -30,8 +30,8 @@ class EventoEntrada(BaseModel):
     @classmethod
     def normalizar_fecha_utc(cls, valor: datetime) -> datetime:
         if valor.tzinfo is None:
-            return valor
-        return valor.astimezone(UTC).replace(tzinfo=None)
+            return valor.replace(tzinfo=UTC)
+        return valor.astimezone(UTC)
 
 
 class ResultadoProcesamiento(BaseModel):
