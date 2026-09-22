@@ -2,3 +2,15 @@ reject http any any -> any any (msg:"DEFENSA SQLi de alta confianza"; flow:estab
 alert http any any -> any any (msg:"DEFENSA sondeo de archivo sensible"; flow:established,to_server; http.uri; pcre:"/\/(?:\.env|\.git(?:\/config)?|\.htaccess|\.htpasswd|wp-config\.php|database\.sql|id_rsa|backup|config\.php)/Ui"; classtype:web-application-attack; sid:1000002; rev:2;)
 alert http any any -> any any (msg:"DEFENSA sondeo de copia de respaldo"; flow:established,to_server; http.uri; pcre:"/\.(?:bak|old|orig|save|swp)(?:\?|$)/Ui"; classtype:web-application-attack; sid:1000003; rev:1;)
 alert http any any -> any any (msg:"DEFENSA escaneo web detectado (Nikto/ffuf)"; flow:established,to_server; http.user_agent; pcre:"/(?:nikto|ffuf|dirbuster|gobuster|wpscan|sqlmap|nmap|zaproxy)/i"; classtype:web-application-attack; sid:1000004; rev:2;)
+# Pb-11: Detección de XSS - Regla 1000005
+alert http any any -> any any (msg:"DEFENSA XSS detectado (script tag)"; flow:established,to_server; http.uri; pcre:"/<script[^>]*>/i"; classtype:web-application-attack; sid:1000005; rev:1;)
+# Pb-11: Detección de XSS - Regla 1000006
+alert http any any -> any any (msg:"DEFENSA XSS detectado (event handler)"; flow:established,to_server; http.uri; pcre:"/on(?:load|error|click|mouse|focus|blur|change)\s*=/i"; classtype:web-application-attack; sid:1000006; rev:1;)
+# Pb-11: Detección de XSS - Regla 1000007
+alert http any any -> any any (msg:"DEFENSA XSS detectado (POST)"; flow:established,to_server; content:"POST"; http.request_body; pcre:"/<script[^>]*>/i"; classtype:web-application-attack; sid:1000007; rev:1;)
+# Pb-12: Detección de path traversal - Regla 1000008
+alert http any any -> any any (msg:"DEFENSA path traversal detectado"; flow:established,to_server; http.uri; pcre:"/(\\.\\.\\/|\\.\\.\\\)/"; classtype:web-application-attack; sid:1000008; rev:1;)
+# Pb-12: Detección de path traversal - Regla 1000009
+alert http any any -> any any (msg:"DEFENSA path traversal detectado (encoded)"; flow:established,to_server; http.uri; pcre:"/(%2e%2e%2f|%2e%2e%5c)/i"; classtype:web-application-attack; sid:1000009; rev:1;)
+# Pb-12: Detección de path traversal - Regla 1000010
+alert http any any -> any any (msg:"DEFENSA acceso a archivo sensible"; flow:established,to_server; http.uri; pcre:"/(\/etc\/(passwd|shadow|hosts)|\/proc\/|\/var\/log)/i"; classtype:web-application-attack; sid:1000010; rev:1;)

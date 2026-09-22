@@ -7,6 +7,76 @@
 - Abrir tres vistas: `eve.json`, log de acceso nginx y API/base de incidentes.
 - Anotar commit, fecha UTC, IP objetivo y versiones de Suricata/k6.
 
+## Pb-11: detectar inyección XSS
+
+1. Levantar la VM con `vagrant up` y asegurar que Suricata está corriendo:
+   ```bash
+   vagrant ssh
+   sudo systemctl status suricata
+   ```
+
+2. Ejecutar ataque XSS con script tag:
+   ```bash
+   curl "http://192.168.56.20:3000/search?q=%3Cscript%3Ealert(1)%3C/script%3E"
+   ```
+
+3. Verificar que Suricata detectó el ataque:
+   ```bash
+   sudo tail -f /var/log/suricata/eve.json | jq 'select(.alert.signature_id == 1000005)'
+   ```
+
+4. Guardar la línea de `eve.json` que incluya: fecha, IP, SID=1000005, firma="DEFENSA XSS detectado", categoría="Web Application Attack".
+
+5. Verificar que el servicio creó un `Incidente` con `tipo_ataque = "xss"`:
+   ```bash
+   # En otra terminal, con token de admin:
+   curl -H "Authorization: Bearer $TOKEN" http://192.168.56.20:8000/api/incidentes | jq '.[] | select(.tipo_ataque == "xss")'
+   ```
+
+6. Evidencia: captura de eve.json con SID 1000005 y captura del incidente en API con tipo_ataque="xss".
+
+**Payloads probados**:
+- `<script>alert(1)</script>` → SID 1000005
+- `onclick=alert(1)` → SID 1000006  
+- POST con `<img src=x onerror=alert(1)>` → SID 1000007
+
+## Pb-12: detectar path traversal
+
+1. Levantar la VM con `vagrant up` y asegurar que Suricata está corriendo:
+   ```bash
+   vagrant ssh
+   sudo systemctl status suricata
+   ```
+
+2. Ejecutar ataque path traversal (codificado):
+   ```bash
+   curl "http://192.168.56.20:3000/download?file=%2e%2e%2f%2e%2e%2fetc%2fpasswd"
+   ```
+
+3. Verificar que Suricata detectó el ataque (cualquiera de los SID 1000008-1000010):
+   ```bash
+   sudo tail -f /var/log/suricata/eve.json | jq 'select(.alert.signature_id >= 1000008 and .alert.signature_id <= 1000010)'
+   ```
+
+4. Guardar la línea de `eve.json` que incluya: fecha, IP, SID=1000008/1000009/1000010, firma="DEFENSA path traversal", categoría="Web Application Attack".
+
+5. Verificar que el servicio creó un `Incidente` con `tipo_ataque = "traversal"`:
+   ```bash
+   # En otra terminal, con token de admin:
+   curl -H "Authorization: Bearer $TOKEN" http://192.168.56.20:8000/api/incidentes | jq '.[] | select(.tipo_ataque == "traversal")'
+   ```
+
+6. Evidencia: captura de eve.json con SID 1000008/1000009/1000010 y captura del incidente en API con tipo_ataque="traversal".
+
+**Payloads probados**:
+- `../../../../etc/passwd` → SID 1000008 (patrón básico)
+- `..%2F..%2Fetc%2Fpasswd` → SID 1000009 (codificado)
+- `/var/log` o `/etc/shadow` → SID 1000010 (rutas sensibles)
+
+**Limitaciones conocidas**:
+- Doble codificación (`%252e%252e%252f` = `%2e%2e%2f` decodificado dos veces) puede evadir las reglas
+- Paths Windows (`..\..\config`) no se detectan (fuera de alcance MVP)
+
 ## Pb-2: detectar inyección SQL
 
 1. Dejar Suricata en IDS o IPS y vaciar solo las vistas de terminal, no los logs.
